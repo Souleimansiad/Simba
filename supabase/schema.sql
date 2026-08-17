@@ -372,5 +372,104 @@ create policy order_updates_broadcast_read on realtime.messages
   using (realtime.topic() like 'order-updates:%');
 
 -- =====================================================================
+-- 8. DATABASE WEBHOOKS -> /api/hooks/* (Vercel)
+-- Implémentés via pg_net (net.http_post, async) plutôt que le wizard
+-- Database Webhooks du dashboard, pour rester dans une migration versionnée.
+-- Le header x-webhook-secret doit correspondre à SUPABASE_WEBHOOK_SECRET
+-- côté Vercel. Mettre à jour l'URL si le domaine de déploiement change.
+-- =====================================================================
+
+create extension if not exists pg_net;
+
+create or replace function public.webhook_depot_created()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  perform net.http_post(
+    url := 'https://simba-simba23.vercel.app/api/hooks/depot-created',
+    body := jsonb_build_object('type', tg_op, 'table', tg_table_name, 'record', to_jsonb(new)),
+    headers := jsonb_build_object('Content-Type', 'application/json', 'x-webhook-secret', '4ef525a3f217ce593e8a3ebaf359a27de49dea01')
+  );
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_webhook_depot_created on public.depot_orders;
+create trigger trg_webhook_depot_created
+  after insert on public.depot_orders
+  for each row execute function public.webhook_depot_created();
+
+create or replace function public.webhook_depot_updated()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  perform net.http_post(
+    url := 'https://simba-simba23.vercel.app/api/hooks/depot-updated',
+    body := jsonb_build_object('type', tg_op, 'table', tg_table_name, 'record', to_jsonb(new), 'old_record', to_jsonb(old)),
+    headers := jsonb_build_object('Content-Type', 'application/json', 'x-webhook-secret', '4ef525a3f217ce593e8a3ebaf359a27de49dea01')
+  );
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_webhook_depot_updated on public.depot_orders;
+create trigger trg_webhook_depot_updated
+  after update on public.depot_orders
+  for each row execute function public.webhook_depot_updated();
+
+create or replace function public.webhook_retrait_created()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  perform net.http_post(
+    url := 'https://simba-simba23.vercel.app/api/hooks/retrait-created',
+    body := jsonb_build_object('type', tg_op, 'table', tg_table_name, 'record', to_jsonb(new)),
+    headers := jsonb_build_object('Content-Type', 'application/json', 'x-webhook-secret', '4ef525a3f217ce593e8a3ebaf359a27de49dea01')
+  );
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_webhook_retrait_created on public.retrait_orders;
+create trigger trg_webhook_retrait_created
+  after insert on public.retrait_orders
+  for each row execute function public.webhook_retrait_created();
+
+create or replace function public.webhook_retrait_updated()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  perform net.http_post(
+    url := 'https://simba-simba23.vercel.app/api/hooks/retrait-updated',
+    body := jsonb_build_object('type', tg_op, 'table', tg_table_name, 'record', to_jsonb(new), 'old_record', to_jsonb(old)),
+    headers := jsonb_build_object('Content-Type', 'application/json', 'x-webhook-secret', '4ef525a3f217ce593e8a3ebaf359a27de49dea01')
+  );
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_webhook_retrait_updated on public.retrait_orders;
+create trigger trg_webhook_retrait_updated
+  after update on public.retrait_orders
+  for each row execute function public.webhook_retrait_updated();
+
+revoke execute on function public.webhook_depot_created() from public, anon, authenticated;
+revoke execute on function public.webhook_depot_updated() from public, anon, authenticated;
+revoke execute on function public.webhook_retrait_created() from public, anon, authenticated;
+revoke execute on function public.webhook_retrait_updated() from public, anon, authenticated;
+
+-- =====================================================================
 -- Fin du schéma
 -- =====================================================================
