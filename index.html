@@ -149,13 +149,15 @@ header.site{
 
 /* ============================= ACTION CARD (depot/retrait) ============================= */
 .action-card{max-width:640px; margin:0 auto; padding:22px;}
-.action-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:6px;}
-@media (max-width:520px){.action-grid{grid-template-columns:1fr;}}
+.action-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:6px;}
+@media (max-width:420px){.action-grid{gap:8px;}}
 .action-tile{
   display:flex; flex-direction:column; align-items:flex-start; gap:10px; padding:22px;
   border-radius:var(--radius-m); border:1.5px solid var(--card-border); text-decoration:none; color:var(--text);
   background:var(--card-bg); transition:transform .15s ease, border-color .15s ease, box-shadow .2s ease;
+  min-width:0;
 }
+@media (max-width:420px){.action-tile{padding:16px 14px; gap:8px;}}
 .action-tile.tile-depot{border-color:rgba(34,197,94,.5);}
 .action-tile.tile-retrait{border-color:rgba(47,143,255,.5);}
 .action-tile:hover{transform:translateY(-3px); box-shadow:0 16px 34px -18px rgba(0,0,0,.5);}
@@ -163,7 +165,12 @@ header.site{
 .tile-depot .tile-icon{background:linear-gradient(135deg,rgba(34,197,94,.22),rgba(34,197,94,.08)); color:var(--success);}
 .tile-retrait .tile-icon{background:linear-gradient(135deg,rgba(47,143,255,.22),rgba(47,143,255,.08)); color:var(--primary);}
 .tile-title{font-family:var(--font-title); font-weight:700; font-size:1.05rem;}
-.tile-desc{font-size:.82rem; color:var(--text-dim);}
+.tile-desc{font-size:.82rem; color:var(--text-dim); line-height:1.35;}
+@media (max-width:420px){
+  .tile-icon{width:38px; height:38px; border-radius:11px;}
+  .tile-title{font-size:.92rem;}
+  .tile-desc{font-size:.74rem;}
+}
 
 /* ============================= SECTIONS ============================= */
 section{padding:44px 0;}
@@ -329,6 +336,13 @@ const KP_LANGS = {
     'depot.amount':'Montant (DJF)', 'depot.bet_id':'ID 1xBet (compte à recharger)',
     'depot.sender_number':'Votre numéro Waafi (expéditeur)', 'depot.transfer_id':'Transfer ID Waafi (preuve de paiement)',
     'depot.whatsapp':'WhatsApp (optionnel)', 'depot.submit':'Soumettre le dépôt',
+    'depot.steps.title':'Comment envoyer votre paiement Waafi',
+    'depot.step1':'Ouvrez votre application Waafi (ou composez le code USSD de votre opérateur)',
+    'depot.step2':'Choisissez « Envoyer de l\'argent » / Transfert',
+    'depot.step3':'Entrez le numéro de réception ci-dessous et le montant exact',
+    'depot.step4':'Confirmez avec votre code PIN Waafi',
+    'depot.step5':'Copiez le Transfer ID reçu par SMS et collez-le dans le formulaire ci-dessous',
+    'depot.copy_number':'Copier le numéro',
     'retrait.title':'Retrait depuis 1xBet', 'retrait.steps.title':'Comment retirer depuis 1xBet',
     'retrait.step1':'Ouvrez 1xBet et allez dans « Retrait »', 'retrait.step2':'Choisissez Waafi comme méthode de retrait',
     'retrait.step3':'Entrez le montant et confirmez sur 1xBet', 'retrait.step4':'Copiez le code de retrait généré',
@@ -364,6 +378,13 @@ const KP_LANGS = {
     'depot.amount':'Amount (DJF)', 'depot.bet_id':'1xBet ID (account to top up)',
     'depot.sender_number':'Your Waafi number (sender)', 'depot.transfer_id':'Waafi Transfer ID (proof of payment)',
     'depot.whatsapp':'WhatsApp (optional)', 'depot.submit':'Submit deposit',
+    'depot.steps.title':'How to send your Waafi payment',
+    'depot.step1':'Open your Waafi app (or dial your operator\'s USSD code)',
+    'depot.step2':'Choose "Send money" / Transfer',
+    'depot.step3':'Enter the receiving number below and the exact amount',
+    'depot.step4':'Confirm with your Waafi PIN',
+    'depot.step5':'Copy the Transfer ID received by SMS and paste it in the form below',
+    'depot.copy_number':'Copy number',
     'retrait.title':'Withdraw from 1xBet', 'retrait.steps.title':'How to withdraw from 1xBet',
     'retrait.step1':'Open 1xBet and go to "Withdraw"', 'retrait.step2':'Choose Waafi as withdrawal method',
     'retrait.step3':'Enter amount and confirm on 1xBet', 'retrait.step4':'Copy the generated withdrawal code',
@@ -672,9 +693,25 @@ function renderDepot(app){
     ${headerHtml(true, '#/')}
     <div class="container form-page">
       <div class="page-header"><h1>${t('depot.title')}</h1></div>
-      <div class="info-box">
-        <div><div class="label">${t('depot.waafi_number')}</div><div class="value mono">${CONFIG.WAAFI_NUMBER}</div></div>
-        <div style="text-align:right;"><div class="label">${t('depot.waafi_name')}</div><div class="value" style="font-size:.95rem;">${CONFIG.WAAFI_NAME}</div></div>
+      <div class="card" style="margin-bottom:18px;">
+        <h3 style="font-size:1rem;margin-bottom:6px;">${t('depot.steps.title')}</h3>
+        <ol class="steps">
+          <li>${t('depot.step1')}</li>
+          <li>${t('depot.step2')}</li>
+          <li>${t('depot.step3')}</li>
+          <li>${t('depot.step4')}</li>
+          <li>${t('depot.step5')}</li>
+        </ol>
+        <div class="info-box" style="margin-bottom:0;">
+          <div>
+            <div class="label">${t('depot.waafi_number')}</div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div class="value mono">${CONFIG.WAAFI_NUMBER}</div>
+              <button type="button" id="copy-waafi-number" title="${t('depot.copy_number')}" style="background:none;border:none;color:var(--text-dim);width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;">${icon('copy', 15)}</button>
+            </div>
+          </div>
+          <div style="text-align:right;"><div class="label">${t('depot.waafi_name')}</div><div class="value" style="font-size:.95rem;">${CONFIG.WAAFI_NAME}</div></div>
+        </div>
       </div>
       <form id="form-depot" class="card" novalidate>
         <div class="field">
@@ -706,6 +743,9 @@ function renderDepot(app){
   `;
   bindHeaderEvents();
   renderTurnstile('turnstile-depot', (token) => { turnstileToken = token; });
+  document.getElementById('copy-waafi-number').addEventListener('click', () => {
+    navigator.clipboard.writeText(CONFIG.WAAFI_NUMBER).then(() => toast(currentLang==='fr' ? 'Numéro copié' : 'Number copied', 'success'));
+  });
 
   document.getElementById('form-depot').addEventListener('submit', async (e) => {
     e.preventDefault();
