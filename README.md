@@ -28,3 +28,8 @@ Plateforme d'échange Waafi ⇄ 1xBet : dépôt et retrait en quelques minutes.
 4. Configurer le webhook Telegram des bots vers `/api/admin-bot` et `/api/support-client`.
 
 Sans ces variables, le site fonctionne déjà (dépôt/retrait/suivi), seules les notifications et le crédit automatique MobCash restent inactifs.
+
+## Limites du plan Vercel Hobby
+
+- **Fonctions serverless** : max 12 par déploiement. Les routes admin peu fréquentes (`stats`, `action-ordre`, `retry-deposit`, `test-payment`, `create-agent`) sont donc regroupées dans `api/admin.js`, dispatché via `?action=`.
+- **Cron jobs** : max 1 exécution/jour sur Hobby. `ordres-bloques` (censé tourner toutes les 10 min pour détecter les ordres bloqués) tourne donc une fois par jour (9h UTC) tant que le compte n'est pas passé sur le plan Pro. Passer sur Pro permet de repasser `vercel.json` sur `*/10 * * * *` pour une vraie détection en temps quasi réel.
