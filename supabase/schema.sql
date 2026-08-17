@@ -13,9 +13,12 @@ create extension if not exists pgcrypto;
 -- =====================================================================
 
 -- Génère une référence courte lisible (ex: D7F3A9, R2C8E1)
+-- search_path inclut "extensions" : c'est le schéma où Supabase installe
+-- pgcrypto (gen_random_bytes) par défaut.
 create or replace function public.gen_order_ref(p_prefix text)
 returns text
 language sql
+set search_path = public, extensions
 as $$
   select p_prefix || upper(substr(encode(gen_random_bytes(6), 'hex'), 1, 6));
 $$;
@@ -24,6 +27,7 @@ $$;
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
+set search_path = public
 as $$
 begin
   new.updated_at = now();
@@ -355,6 +359,10 @@ drop trigger if exists trg_retrait_orders_broadcast on public.retrait_orders;
 create trigger trg_retrait_orders_broadcast
   after insert or update on public.retrait_orders
   for each row execute function public.broadcast_order_update();
+
+-- Les fonctions trigger ne doivent être invocables qu'en contexte trigger,
+-- jamais directement via /rest/v1/rpc/broadcast_order_update.
+revoke execute on function public.broadcast_order_update() from public, anon, authenticated;
 
 -- Autorise la réception des broadcasts sur les canaux "order-updates:*"
 -- uniquement (pas d'accès aux autres canaux realtime éventuels).

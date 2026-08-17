@@ -280,14 +280,13 @@ table.data-table tr.flash-new{animation:flashRow 1.6s ease;}
 
 /* ------------------------- CONFIGURATION -------------------------- */
 const CONFIG = {
-  // TODO: remplacer une fois le projet Supabase créé
-  SUPABASE_URL: 'https://YOUR-PROJECT-REF.supabase.co',
-  SUPABASE_ANON_KEY: 'YOUR_SUPABASE_ANON_KEY',
+  SUPABASE_URL: 'https://ylbhmtujnhhrdywnztxo.supabase.co',
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlsYmhtdHVqbmhocmR5d256dHhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzY3MDIsImV4cCI6MjEwMjU1MjcwMn0.W7QFGLDcMaXW8ZMEMYl1ryHXYMUIurWIwdNUEGRxdGE',
   // Clé de test Cloudflare officielle (valide toujours) — remplacer par la vraie clé en prod.
   // Cela permet aux formulaires de rester testables tant que Turnstile n'est pas configuré.
   TURNSTILE_SITE_KEY: '1x00000000000000000000AA',
-  // TODO: générer un token aléatoire sécurisé (ex: openssl rand -hex 24) et le garder secret
-  ADMIN_URL_TOKEN: 'REPLACE_WITH_RANDOM_TOKEN',
+  // Doit rester identique à la variable d'environnement Vercel ADMIN_URL_TOKEN (api/_lib/auth.js).
+  ADMIN_URL_TOKEN: '46aeb1b966348cda1f940d9560842f89a0e23c2747a18a58',
   WAAFI_NUMBER: '77583735',
   WAAFI_NAME: 'Siad Kawalieh',
   PROMO_CODE: 'simba10',
