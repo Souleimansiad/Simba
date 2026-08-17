@@ -29,6 +29,14 @@ Plateforme d'échange Waafi ⇄ 1xBet : dépôt et retrait en quelques minutes.
 
 Sans ces variables, le site fonctionne déjà (dépôt/retrait/suivi), seules les notifications et le crédit automatique MobCash restent inactifs.
 
+## Mode manuel (en attendant l'accès à l'API MobCash)
+
+Tant que `MOBCASH_BASE_URL` / `MOBCASH_CASHIER_PASS` / `MOBCASH_CASHDESK_ID` ne sont pas configurées sur Vercel, le crédit/paiement 1xBet se fait **manuellement** :
+
+1. Le SMS Waafi arrive via MacroDroid → `/api/sms-webhook` matche le Transfer ID et passe l'ordre en "Paiement reçu", puis envoie une alerte Telegram à l'admin avec le montant et l'ID 1xBet à créditer.
+2. L'agent recharge/paye manuellement le compte 1xBet, puis clique **Confirmer** dans le panneau admin (Ordres) — l'ordre passe directement à "Crédité avec succès" sans appel MobCash.
+3. Dès que les 3 variables MobCash sont renseignées, le code bascule automatiquement en mode automatique (crédit via l'API MobCash) — aucune modification de code nécessaire.
+
 ## Limites du plan Vercel Hobby
 
 - **Fonctions serverless** : max 12 par déploiement. Les routes admin peu fréquentes (`stats`, `action-ordre`, `retry-deposit`, `test-payment`, `create-agent`) sont donc regroupées dans `api/admin.js`, dispatché via `?action=`.

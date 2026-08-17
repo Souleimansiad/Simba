@@ -1,6 +1,6 @@
 import { supabaseAdmin } from './_lib/supabase.js';
 import { resolveCaller, requireRole } from './_lib/auth.js';
-import { mobcashDeposit, mobcashPayout } from './_lib/mobcash.js';
+import { mobcashDeposit, mobcashPayout, isMobcashConfigured } from './_lib/mobcash.js';
 import { sendTelegramAdmin } from './_lib/telegram.js';
 
 // Route admin consolidée : plusieurs actions peu fréquentes regroupées dans
@@ -131,14 +131,22 @@ async function handleActionOrdre(req, res) {
       }
     }
     await supabaseAdmin.from(table).update({ status: 'paiement_recu' }).eq('id', order_id);
-    try {
-      if (type === 'depot') await mobcashDeposit(order.id_bet1x, order.montant);
-      else await mobcashPayout(order.id_bet1x, order.montant);
+
+    if (!isMobcashConfigured()) {
+      // Mode manuel (MacroDroid + Waafi) : l'agent a déjà crédité/payé le
+      // joueur à la main avant de cliquer "Confirmer" — on clôture l'ordre
+      // directement, sans appel MobCash.
       await supabaseAdmin.from(table).update({ status: 'credite' }).eq('id', order_id);
-    } catch (mcErr) {
-      await supabaseAdmin.from('alertes_etat').insert({ type: 'mobcash_credit_failed', order_id, collection: table });
-      await sendTelegramAdmin(`❌ Confirmation manuelle #${order_id} : échec MobCash — ${mcErr.message}`);
-      return res.status(502).json({ error: 'Confirmation enregistrée mais crédit MobCash a échoué: ' + mcErr.message });
+    } else {
+      try {
+        if (type === 'depot') await mobcashDeposit(order.id_bet1x, order.montant);
+        else await mobcashPayout(order.id_bet1x, order.montant);
+        await supabaseAdmin.from(table).update({ status: 'credite' }).eq('id', order_id);
+      } catch (mcErr) {
+        await supabaseAdmin.from('alertes_etat').insert({ type: 'mobcash_credit_failed', order_id, collection: table });
+        await sendTelegramAdmin(`❌ Confirmation manuelle #${order_id} : échec MobCash — ${mcErr.message}`);
+        return res.status(502).json({ error: 'Confirmation enregistrée mais crédit MobCash a échoué: ' + mcErr.message });
+      }
     }
   }
 
@@ -165,6 +173,7 @@ async function handleRetryDeposit(req, res) {
   if (fetchErr) throw fetchErr;
   if (!order) return res.status(404).json({ error: 'Ordre introuvable' });
   if (order.status === 'credite') return res.status(200).json({ ok: true, already_credited: true });
+  if (!isMobcashConfigured()) return res.status(400).json({ error: 'MobCash non configuré — mode manuel, rien à relancer.' });
 
   await mobcashDeposit(order.id_bet1x, order.montant);
   await supabaseAdmin.from('depot_orders').update({ status: 'credite' }).eq('id', order_id);
@@ -185,6 +194,9 @@ async function handleTestPayment(req, res) {
   const { userId, amount, operation } = req.body || {};
   if (!userId || !amount || !['deposit', 'payout'].includes(operation)) {
     return res.status(400).json({ error: 'Paramètres invalides' });
+  }
+  if (!isMobcashConfigured()) {
+    return res.status(400).json({ error: 'MobCash non configuré (MOBCASH_BASE_URL / MOBCASH_CASHIER_PASS / MOBCASH_CASHDESK_ID manquants sur Vercel).' });
   }
 
   const result = operation === 'deposit'

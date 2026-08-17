@@ -9,6 +9,14 @@ const SERVICE_NAME = 'mobcash';
 const FAILURE_THRESHOLD = 5;
 const OPEN_DURATION_MS = 5 * 60 * 1000;
 
+// Tant que les identifiants MobCash ne sont pas fournis, le crédit/retrait
+// 1xBet se fait manuellement (MacroDroid + Waafi). Dès que ces variables
+// sont renseignées sur Vercel, le crédit redevient automatique sans
+// changement de code.
+export function isMobcashConfigured() {
+  return !!(MOBCASH_BASE_URL && MOBCASH_CASHIER_PASS && MOBCASH_CASHDESK_ID);
+}
+
 function signature(summa) {
   return crypto.createHash('md5').update(String(summa) + MOBCASH_CASHIER_PASS + MOBCASH_CASHDESK_ID).digest('hex');
 }

@@ -1,5 +1,5 @@
 import { supabaseAdmin } from './_lib/supabase.js';
-import { mobcashDeposit } from './_lib/mobcash.js';
+import { mobcashDeposit, isMobcashConfigured } from './_lib/mobcash.js';
 import { sendTelegramAdmin } from './_lib/telegram.js';
 
 // Reçoit les SMS Waafi relayés par MacroDroid (sur le téléphone recevant les
@@ -69,6 +69,14 @@ export default async function handler(req, res) {
     }
 
     await supabaseAdmin.from('depot_orders').update({ status: 'paiement_recu' }).eq('id', order.id);
+
+    // Tant que MobCash n'est pas configuré : paiement Waafi confirmé (SMS
+    // matché), mais le crédit 1xBet se fait manuellement — un agent recharge
+    // le compte puis clique "Confirmer" dans le panneau admin.
+    if (!isMobcashConfigured()) {
+      await sendTelegramAdmin(`💰 Paiement Waafi reçu — Dépôt #${order.id} (${order.montant} DJF → 1xBet ${order.id_bet1x}). Créditez manuellement puis confirmez sur le panneau admin.`);
+      return res.status(200).json({ ok: true, matched: true, credited: false, manual: true });
+    }
 
     try {
       await mobcashDeposit(order.id_bet1x, order.montant);
