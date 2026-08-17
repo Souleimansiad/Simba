@@ -2,11 +2,13 @@ import { supabaseAdmin } from './_lib/supabase.js';
 import { mobcashDeposit, isMobcashConfigured } from './_lib/mobcash.js';
 import { sendTelegramAdmin } from './_lib/telegram.js';
 
-// Reçoit les SMS Waafi relayés par MacroDroid (sur le téléphone recevant les
-// paiements). Configurer MacroDroid pour POSTer soit du JSON structuré
-// { transfer_id, montant, text }, soit uniquement { text } (SMS brut) —
-// dans ce cas l'extraction se fait par expression régulière ci-dessous.
-// Header optionnel "x-sms-secret" à faire correspondre à SMS_WEBHOOK_SECRET.
+// Reçoit les SMS/notifications Waafi relayés par MacroDroid (sur le téléphone
+// recevant les paiements). Accepte plusieurs formats de body JSON :
+// { text | message | notification, transfer_id?, montant? } — le texte brut
+// est parsé par expression régulière si transfer_id/montant ne sont pas
+// fournis explicitement. Le secret (SMS_WEBHOOK_SECRET) peut être envoyé
+// soit en header "x-sms-secret", soit en champ "secret" du body JSON
+// (MacroDroid ne permettant pas toujours facilement d'ajouter un header).
 
 function extractFromText(text) {
   if (!text) return { transferId: null, montant: null };
@@ -21,26 +23,29 @@ function extractFromText(text) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Méthode non autorisée' });
 
+  const body = req.body || {};
+
   const secret = process.env.SMS_WEBHOOK_SECRET;
-  if (secret && req.headers['x-sms-secret'] !== secret) {
+  const providedSecret = req.headers['x-sms-secret'] || body.secret;
+  if (secret && providedSecret !== secret) {
     return res.status(401).json({ error: 'Secret invalide' });
   }
 
-  const body = req.body || {};
-  const extracted = extractFromText(body.text || body.message);
+  const rawText = body.text || body.message || body.notification;
+  const extracted = extractFromText(rawText);
   const transferId = body.transfer_id || extracted.transferId;
   const montant = body.montant != null ? Number(body.montant) : extracted.montant;
 
   try {
     await supabaseAdmin.from('waafi_notifications').insert({
       type: 'sms_received',
-      message: body.text || body.message || null,
+      message: rawText || null,
       transfer_id: transferId,
       montant,
     });
 
     if (!transferId) {
-      await sendTelegramAdmin(`⚠️ SMS Waafi reçu sans Transfer ID détecté : "${(body.text || body.message || '').slice(0, 200)}"`);
+      await sendTelegramAdmin(`⚠️ SMS Waafi reçu sans Transfer ID détecté : "${(rawText || '').slice(0, 200)}"`);
       return res.status(200).json({ ok: true, matched: false, reason: 'no_transfer_id' });
     }
 
