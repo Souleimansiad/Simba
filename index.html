@@ -12,7 +12,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
-<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <style>
@@ -212,6 +211,12 @@ footer.site{border-top:1px solid var(--card-border); padding:28px 0; text-align:
 .steps{list-style:none; counter-reset:step; margin-bottom:20px;}
 .steps li{counter-increment:step; display:flex; gap:12px; padding:10px 0; font-size:.9rem; color:var(--text-dim);}
 .steps li::before{content:counter(step); flex:0 0 auto; width:26px; height:26px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-size:.78rem; font-weight:700;}
+.captcha-row{display:flex; align-items:center; gap:10px;}
+.captcha-question{
+  background:var(--input-bg); border:1.5px solid var(--card-border); border-radius:var(--radius-s);
+  padding:13px 16px; font-weight:700; font-size:1rem; color:var(--text); white-space:nowrap;
+}
+.captcha-input{max-width:110px;}
 
 /* ============================= SUIVI / TIMELINE ============================= */
 .suivi-card{max-width:560px; margin:40px auto; text-align:center;}
@@ -303,9 +308,6 @@ table.data-table tr.flash-new{animation:flashRow 1.6s ease;}
 const CONFIG = {
   SUPABASE_URL: 'https://ylbhmtujnhhrdywnztxo.supabase.co',
   SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlsYmhtdHVqbmhocmR5d256dHhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzY3MDIsImV4cCI6MjEwMjU1MjcwMn0.W7QFGLDcMaXW8ZMEMYl1ryHXYMUIurWIwdNUEGRxdGE',
-  // Clé de test Cloudflare officielle (valide toujours) — remplacer par la vraie clé en prod.
-  // Cela permet aux formulaires de rester testables tant que Turnstile n'est pas configuré.
-  TURNSTILE_SITE_KEY: '1x00000000000000000000AA',
   // Doit rester identique à la variable d'environnement Vercel ADMIN_URL_TOKEN (api/_lib/auth.js).
   ADMIN_URL_TOKEN: '46aeb1b966348cda1f940d9560842f89a0e23c2747a18a58',
   WAAFI_NUMBER: '77583735',
@@ -351,6 +353,7 @@ const KP_LANGS = {
     'retrait.code':'Code retrait 1xBet', 'retrait.whatsapp':'WhatsApp (optionnel)', 'retrait.submit':'Soumettre le retrait',
     'form.required':'Ce champ est requis', 'form.min_amount':'Montant minimum : 500 DJF',
     'form.transfer_min':'Doit contenir au moins 6 chiffres',
+    'form.captcha_label':'Vérification anti-robot', 'form.captcha_wrong':'Réponse incorrecte, réessayez.',
     'suivi.title':'Suivi de votre ordre', 'suivi.status.en_attente':'En attente',
     'suivi.status.paiement_recu':'Paiement reçu', 'suivi.status.credite':'Crédité avec succès',
     'suivi.status.rejete':'Rejeté', 'suivi.status.fraude':'Bloqué (fraude suspectée)',
@@ -393,6 +396,7 @@ const KP_LANGS = {
     'retrait.code':'1xBet withdrawal code', 'retrait.whatsapp':'WhatsApp (optional)', 'retrait.submit':'Submit withdrawal',
     'form.required':'This field is required', 'form.min_amount':'Minimum amount: 500 DJF',
     'form.transfer_min':'Must contain at least 6 digits',
+    'form.captcha_label':'Anti-bot check', 'form.captcha_wrong':'Wrong answer, try again.',
     'suivi.title':'Track your order', 'suivi.status.en_attente':'Pending',
     'suivi.status.paiement_recu':'Payment received', 'suivi.status.credite':'Successfully credited',
     'suivi.status.rejete':'Rejected', 'suivi.status.fraude':'Blocked (suspected fraud)',
@@ -668,27 +672,28 @@ function renderHome(app){
   });
 }
 
-/* ------------------------------ TURNSTILE HELPER ----------------------- */
-function renderTurnstile(containerId, onToken){
-  const el = document.getElementById(containerId);
-  if (!el) return;
-  function tryRender(retries){
-    if (window.turnstile && typeof window.turnstile.render === 'function'){
-      window.turnstile.render('#' + containerId, {
-        sitekey: CONFIG.TURNSTILE_SITE_KEY,
-        callback: onToken,
-        theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light',
-      });
-    } else if (retries > 0){
-      setTimeout(() => tryRender(retries - 1), 300);
-    }
-  }
-  tryRender(20);
+/* ------------------------------ MATH CAPTCHA ----------------------- */
+function captchaHtml(id){
+  return `
+    <div class="field">
+      <label>${t('form.captcha_label')}</label>
+      <div class="captcha-row">
+        <span class="captcha-question mono" id="${id}-question"></span>
+        <input type="number" inputmode="numeric" class="mono-input captcha-input" id="${id}-input" placeholder="?" required>
+      </div>
+    </div>
+  `;
+}
+function mountCaptcha(id){
+  const a = Math.floor(Math.random() * 9) + 1;
+  const b = Math.floor(Math.random() * 9) + 1;
+  document.getElementById(id + '-question').textContent = `${a} + ${b} = `;
+  const answer = a + b;
+  return () => Number(document.getElementById(id + '-input').value) === answer;
 }
 
 /* ------------------------------ DEPOT PAGE ------------------------------ */
 function renderDepot(app){
-  let turnstileToken = '';
   app.innerHTML = `
     ${headerHtml(true, '#/')}
     <div class="container form-page">
@@ -736,13 +741,13 @@ function renderDepot(app){
           <label for="d-whatsapp">${t('depot.whatsapp')}</label>
           <input type="tel" id="d-whatsapp">
         </div>
-        <div id="turnstile-depot" style="margin-bottom:16px;"></div>
+        ${captchaHtml('captcha-depot')}
         <button type="submit" class="btn btn-primary btn-block" id="d-submit">${t('depot.submit')}</button>
       </form>
     </div>
   `;
   bindHeaderEvents();
-  renderTurnstile('turnstile-depot', (token) => { turnstileToken = token; });
+  const checkCaptcha = mountCaptcha('captcha-depot');
   document.getElementById('copy-waafi-number').addEventListener('click', () => {
     navigator.clipboard.writeText(CONFIG.WAAFI_NUMBER).then(() => toast(currentLang==='fr' ? 'Numéro copié' : 'Number copied', 'success'));
   });
@@ -757,6 +762,7 @@ function renderDepot(app){
 
     if (!amount || amount < CONFIG.MIN_AMOUNT) return toast(t('form.min_amount'), 'error');
     if (!betId || !sender) return toast(t('form.required'), 'error');
+    if (!checkCaptcha()) return toast(t('form.captcha_wrong'), 'error');
 
     const btn = document.getElementById('d-submit');
     btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
@@ -764,7 +770,7 @@ function renderDepot(app){
       const { data, error } = await sb.from('depot_orders').insert({
         montant: amount, id_bet1x: betId, numero_waafi_expediteur: sender,
         transfer_id: transferId || null, whatsapp: whatsapp || null,
-        turnstile_token: turnstileToken || null, lang: currentLang,
+        lang: currentLang,
       }).select('id').single();
       if (error) throw error;
       location.hash = '#suivi-' + data.id;
@@ -777,7 +783,6 @@ function renderDepot(app){
 
 /* ------------------------------ RETRAIT PAGE ------------------------------ */
 function renderRetrait(app){
-  let turnstileToken = '';
   app.innerHTML = `
     ${headerHtml(true, '#/')}
     <div class="container form-page">
@@ -814,13 +819,13 @@ function renderRetrait(app){
           <label for="r-whatsapp">${t('retrait.whatsapp')}</label>
           <input type="tel" id="r-whatsapp">
         </div>
-        <div id="turnstile-retrait" style="margin-bottom:16px;"></div>
+        ${captchaHtml('captcha-retrait')}
         <button type="submit" class="btn btn-primary btn-block" id="r-submit">${t('retrait.submit')}</button>
       </form>
     </div>
   `;
   bindHeaderEvents();
-  renderTurnstile('turnstile-retrait', (token) => { turnstileToken = token; });
+  const checkCaptcha = mountCaptcha('captcha-retrait');
 
   document.getElementById('form-retrait').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -832,6 +837,7 @@ function renderRetrait(app){
 
     if (!amount || amount < CONFIG.MIN_AMOUNT) return toast(t('form.min_amount'), 'error');
     if (!betId || !waafi || !code) return toast(t('form.required'), 'error');
+    if (!checkCaptcha()) return toast(t('form.captcha_wrong'), 'error');
 
     const btn = document.getElementById('r-submit');
     btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
@@ -839,7 +845,7 @@ function renderRetrait(app){
       const { data, error } = await sb.from('retrait_orders').insert({
         montant: amount, id_bet1x: betId, numero_waafi_reception: waafi,
         code_retrait_1x: code, whatsapp: whatsapp || null,
-        turnstile_token: turnstileToken || null, lang: currentLang,
+        lang: currentLang,
       }).select('id').single();
       if (error) throw error;
       location.hash = '#suivi-' + data.id;
