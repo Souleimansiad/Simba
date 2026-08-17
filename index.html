@@ -963,7 +963,7 @@ function renderAdminDashboard(main){
   let charts = {};
   async function load(range){
     try {
-      const stats = await apiFetch('admin-stats?range=' + range);
+      const stats = await apiFetch('admin?action=stats&range=' + range);
       const statGrid = document.getElementById('stat-grid');
       statGrid.innerHTML = `
         <div class="card stat-card"><div class="label">Total ordres</div><div class="value">${stats.totals.orders}</div></div>
@@ -1044,7 +1044,7 @@ function renderAdminOrders(main){
       btn.addEventListener('click', async () => {
         btn.disabled = true;
         try {
-          await apiFetch('admin-action-ordre', { method:'POST', body:{ order_id: btn.dataset.id, type: btn.dataset.type, action: btn.dataset.act } });
+          await apiFetch('admin?action=action-ordre', { method:'POST', body:{ order_id: btn.dataset.id, type: btn.dataset.type, action: btn.dataset.act } });
           toast('Action appliquée', 'success');
         } catch (err) { toast(err.message, 'error'); btn.disabled = false; }
       });
@@ -1154,7 +1154,7 @@ function renderAdminAgents(main){
   document.getElementById('agent-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     try {
-      await apiFetch('admin-create-agent', { method:'POST', body:{
+      await apiFetch('admin?action=create-agent', { method:'POST', body:{
         name: document.getElementById('a-name').value.trim(),
         email: document.getElementById('a-email').value.trim(),
         password: document.getElementById('a-password').value,
@@ -1197,7 +1197,7 @@ function renderAdminTestPay(main){
     const resultEl = document.getElementById('tp-result');
     resultEl.textContent = 'Envoi…';
     try {
-      const res = await apiFetch('admin-test-payment', { method:'POST', body:{
+      const res = await apiFetch('admin?action=test-payment', { method:'POST', body:{
         userId: document.getElementById('tp-userid').value.trim(),
         amount: Number(document.getElementById('tp-amount').value),
         operation: document.getElementById('tp-op').value,
