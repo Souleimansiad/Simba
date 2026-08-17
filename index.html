@@ -1,0 +1,1224 @@
+<!doctype html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Simba — Dépôt & Retrait 1xBet via Waafi</title>
+<meta name="description" content="Simba : échange rapide et sécurisé entre Waafi et 1xBet. Dépôt et retrait en quelques minutes.">
+<meta name="theme-color" content="#060B14">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232F8FFF'/%3E%3Ctext x='32' y='44' font-size='34' font-family='Arial' font-weight='800' text-anchor='middle' fill='white'%3ES%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232F8FFF'/%3E%3Ctext x='32' y='44' font-size='34' font-family='Arial' font-weight='800' text-anchor='middle' fill='white'%3ES%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<style>
+/* ============================= TOKENS ============================= */
+:root{
+  --radius-s:10px; --radius-m:16px; --radius-l:22px;
+  --font-title:'Sora',system-ui,sans-serif;
+  --font-body:'DM Sans',system-ui,sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,monospace;
+  --primary:#2F8FFF; --primary-2:#6FB6FF;
+  --success:#22C55E; --danger:#EF4444; --warning:#F59E0B;
+}
+html[data-theme="dark"]{
+  --bg:#060B14; --bg-alt:#0A1220; --bg-elev:#0D1526;
+  --card-bg:rgba(255,255,255,.045); --card-bg-solid:#0D1526;
+  --card-border:rgba(255,255,255,.09);
+  --text:#F5F8FF; --text-dim:#93A2BD; --text-faint:#5B6B87;
+  --glow:0 0 44px rgba(47,143,255,.32);
+  --shadow:0 20px 60px -20px rgba(0,0,0,.6);
+  --input-bg:rgba(255,255,255,.04);
+}
+html[data-theme="light"]{
+  --bg:#EAF3FF; --bg-alt:#F5F9FF; --bg-elev:#FFFFFF;
+  --card-bg:rgba(255,255,255,.85); --card-bg-solid:#FFFFFF;
+  --card-border:rgba(15,40,80,.09);
+  --text:#0B1B33; --text-dim:#4A5872; --text-faint:#8593AC;
+  --glow:0 0 44px rgba(47,143,255,.18);
+  --shadow:0 20px 50px -22px rgba(20,50,100,.25);
+  --input-bg:rgba(15,40,80,.035);
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--bg); color:var(--text); font-family:var(--font-body);
+  min-height:100vh; -webkit-font-smoothing:antialiased; line-height:1.5;
+  transition:background .25s ease, color .25s ease;
+}
+h1,h2,h3,h4{font-family:var(--font-title); font-weight:800; letter-spacing:-.01em;}
+.mono{font-family:var(--font-mono);}
+a{color:inherit;}
+button{font-family:var(--font-body); cursor:pointer;}
+img,svg{display:block; max-width:100%;}
+.container{max-width:1080px; margin:0 auto; padding:0 20px;}
+.hidden{display:none !important;}
+.sr-only{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0);}
+
+/* ============================= HEADER ============================= */
+header.site{
+  position:sticky; top:0; z-index:40; backdrop-filter:blur(14px);
+  background:color-mix(in srgb, var(--bg) 78%, transparent);
+  border-bottom:1px solid var(--card-border);
+}
+.header-inner{display:flex; align-items:center; justify-content:space-between; padding:14px 20px; max-width:1080px; margin:0 auto; gap:12px;}
+.logo{display:flex; align-items:center; gap:10px; font-family:var(--font-title); font-weight:800; font-size:1.25rem;}
+.logo-mark{width:34px; height:34px; border-radius:10px; background:linear-gradient(135deg,var(--primary),#7CC4FF); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; box-shadow:var(--glow);}
+.tagline-small{font-size:.72rem; color:var(--text-dim); font-weight:500; display:block; margin-top:-2px;}
+.header-actions{display:flex; align-items:center; gap:8px;}
+.icon-btn{
+  width:38px; height:38px; border-radius:10px; border:1px solid var(--card-border);
+  background:var(--card-bg); color:var(--text); display:flex; align-items:center; justify-content:center;
+  font-size:.95rem; transition:transform .15s ease, border-color .15s ease;
+}
+.icon-btn:hover{border-color:var(--primary);}
+.icon-btn:active{transform:scale(.94);}
+.status-pill{
+  display:flex; align-items:center; gap:6px; font-size:.72rem; color:var(--text-dim);
+  border:1px solid var(--card-border); border-radius:999px; padding:6px 10px; background:var(--card-bg);
+}
+.status-dot{width:8px; height:8px; border-radius:50%; background:var(--success); box-shadow:0 0 0 3px rgba(34,197,94,.18);}
+@media (prefers-reduced-motion:no-preference){
+  .status-dot{animation:pulse-dot 1.8s ease-in-out infinite;}
+}
+@keyframes pulse-dot{0%,100%{opacity:1;}50%{opacity:.45;}}
+
+/* ============================= BUTTONS ============================= */
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  border-radius:var(--radius-s); border:1px solid transparent; padding:12px 20px;
+  font-weight:700; font-size:.92rem; transition:transform .15s ease, box-shadow .2s ease, filter .15s ease;
+  text-decoration:none; white-space:nowrap;
+}
+.btn:active{transform:scale(.97);}
+.btn-primary{background:linear-gradient(135deg,var(--primary),#63A9FF); color:#fff; box-shadow:0 10px 30px -8px rgba(47,143,255,.55);}
+.btn-primary:hover{filter:brightness(1.08);}
+.btn-outline{background:var(--card-bg); border-color:var(--card-border); color:var(--text);}
+.btn-outline:hover{border-color:var(--primary);}
+.btn-success{background:linear-gradient(135deg,#22C55E,#4ADE80); color:#06210F; box-shadow:0 10px 26px -10px rgba(34,197,94,.5);}
+.btn-danger{background:linear-gradient(135deg,#EF4444,#F87171); color:#2A0808; box-shadow:0 10px 26px -10px rgba(239,68,68,.5);}
+.btn-block{width:100%;}
+.btn-sm{padding:8px 14px; font-size:.8rem;}
+.btn:disabled{opacity:.5; cursor:not-allowed; filter:none; transform:none;}
+
+/* ============================= GLASS CARD ============================= */
+.card{
+  background:var(--card-bg); border:1px solid var(--card-border); border-radius:var(--radius-l);
+  backdrop-filter:blur(18px); box-shadow:var(--shadow); padding:26px;
+}
+
+/* ============================= HERO ============================= */
+.hero{position:relative; overflow:hidden; padding:64px 0 40px;}
+.hero-bg{position:absolute; inset:0; z-index:0; overflow:hidden;}
+.orb{position:absolute; border-radius:50%; filter:blur(60px); opacity:.55;}
+.orb-1{width:340px; height:340px; background:#2F8FFF; top:-120px; left:-80px;}
+.orb-2{width:280px; height:280px; background:#7C4DFF; top:60px; right:-100px; opacity:.35;}
+.orb-3{width:220px; height:220px; background:#22C55E; bottom:-100px; left:40%; opacity:.25;}
+@media (prefers-reduced-motion:no-preference){
+  .orb-1{animation:float-a 14s ease-in-out infinite;}
+  .orb-2{animation:float-b 18s ease-in-out infinite;}
+  .orb-3{animation:float-a 16s ease-in-out infinite reverse;}
+}
+@keyframes float-a{0%,100%{transform:translate(0,0);}50%{transform:translate(30px,40px);}}
+@keyframes float-b{0%,100%{transform:translate(0,0);}50%{transform:translate(-40px,20px);}}
+.hero-content{position:relative; z-index:1; text-align:center; max-width:680px; margin:0 auto;}
+.eyebrow{display:inline-flex; align-items:center; gap:6px; background:var(--card-bg); border:1px solid var(--card-border); padding:6px 14px; border-radius:999px; font-size:.78rem; color:var(--primary-2); font-weight:600; margin-bottom:18px;}
+.hero h1{font-size:clamp(2rem,5vw,3.1rem); line-height:1.08; margin-bottom:14px;}
+.hero h1 span{background:linear-gradient(135deg,var(--primary),#8FD3FF); -webkit-background-clip:text; background-clip:text; color:transparent;}
+.hero p.sub{color:var(--text-dim); font-size:1.05rem; margin-bottom:22px;}
+.promo-row{display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap; margin-bottom:26px;}
+.promo-code{
+  display:flex; align-items:center; gap:10px; background:var(--card-bg); border:1px dashed var(--primary);
+  border-radius:var(--radius-s); padding:10px 16px; font-family:var(--font-mono); font-weight:700; color:var(--primary-2);
+}
+.promo-code button{background:none; border:none; color:var(--text-dim); font-size:1rem;}
+
+/* ============================= ACTION CARD (depot/retrait) ============================= */
+.action-card{max-width:640px; margin:0 auto; padding:22px;}
+.action-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:6px;}
+@media (max-width:520px){.action-grid{grid-template-columns:1fr;}}
+.action-tile{
+  display:flex; flex-direction:column; align-items:flex-start; gap:10px; padding:22px;
+  border-radius:var(--radius-m); border:1.5px solid var(--card-border); text-decoration:none; color:var(--text);
+  background:var(--card-bg); transition:transform .15s ease, border-color .15s ease, box-shadow .2s ease;
+}
+.action-tile.tile-depot{border-color:rgba(34,197,94,.5);}
+.action-tile.tile-retrait{border-color:rgba(47,143,255,.5);}
+.action-tile:hover{transform:translateY(-3px); box-shadow:0 16px 34px -18px rgba(0,0,0,.5);}
+.tile-icon{width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.3rem;}
+.tile-depot .tile-icon{background:rgba(34,197,94,.16); color:var(--success);}
+.tile-retrait .tile-icon{background:rgba(47,143,255,.16); color:var(--primary);}
+.tile-title{font-family:var(--font-title); font-weight:700; font-size:1.05rem;}
+.tile-desc{font-size:.82rem; color:var(--text-dim);}
+
+/* ============================= SECTIONS ============================= */
+section{padding:44px 0;}
+.section-title{text-align:center; margin-bottom:28px;}
+.section-title h2{font-size:1.7rem; margin-bottom:8px;}
+.section-title p{color:var(--text-dim);}
+
+/* FAQ */
+.faq-item{border:1px solid var(--card-border); border-radius:var(--radius-m); margin-bottom:10px; overflow:hidden; background:var(--card-bg);}
+.faq-q{display:flex; align-items:center; justify-content:space-between; padding:16px 18px; font-weight:700; background:none; border:none; color:var(--text); width:100%; text-align:left; font-size:.95rem;}
+.faq-a{padding:0 18px; max-height:0; overflow:hidden; color:var(--text-dim); font-size:.88rem; transition:max-height .25s ease, padding .25s ease;}
+.faq-item.open .faq-a{padding:0 18px 16px; max-height:240px;}
+.faq-item.open .faq-q .chev{transform:rotate(180deg);}
+.chev{transition:transform .2s ease;}
+
+/* Support / footer */
+.support-row{display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:8px;}
+footer.site{border-top:1px solid var(--card-border); padding:28px 0; text-align:center; color:var(--text-faint); font-size:.8rem;}
+
+/* ============================= FORM PAGES ============================= */
+.page-header{display:flex; align-items:center; gap:14px; padding:18px 0 6px;}
+.back-btn{width:38px; height:38px; border-radius:10px; background:var(--card-bg); border:1px solid var(--card-border); display:flex; align-items:center; justify-content:center; text-decoration:none; color:var(--text); font-size:1.1rem;}
+.page-header h1{font-size:1.4rem;}
+.form-page{max-width:560px; margin:0 auto; padding-bottom:60px;}
+.info-box{display:flex; justify-content:space-between; align-items:center; background:var(--card-bg); border:1px solid var(--card-border); border-radius:var(--radius-m); padding:16px 18px; margin-bottom:18px;}
+.info-box .label{font-size:.72rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:.04em;}
+.info-box .value{font-family:var(--font-mono); font-weight:700; font-size:1.15rem; color:var(--primary-2);}
+.field{margin-bottom:16px;}
+.field label{display:block; font-size:.82rem; font-weight:600; margin-bottom:6px; color:var(--text-dim);}
+.field .hint{font-size:.72rem; color:var(--text-faint); margin-top:5px;}
+.field input,.field select{
+  width:100%; padding:13px 14px; border-radius:var(--radius-s); border:1.5px solid var(--card-border);
+  background:var(--input-bg); color:var(--text); font-size:.95rem; font-family:var(--font-body);
+  transition:border-color .15s ease, box-shadow .15s ease;
+}
+.field input.mono-input{font-family:var(--font-mono);}
+.field input:focus,.field select:focus{outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(47,143,255,.15);}
+.field input.invalid{border-color:var(--danger);}
+.steps{list-style:none; counter-reset:step; margin-bottom:20px;}
+.steps li{counter-increment:step; display:flex; gap:12px; padding:10px 0; font-size:.9rem; color:var(--text-dim);}
+.steps li::before{content:counter(step); flex:0 0 auto; width:26px; height:26px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-size:.78rem; font-weight:700;}
+
+/* ============================= SUIVI / TIMELINE ============================= */
+.suivi-card{max-width:560px; margin:40px auto; text-align:center;}
+.suivi-id{font-family:var(--font-mono); font-size:1.4rem; font-weight:700; color:var(--primary-2); margin-bottom:6px;}
+.timeline{list-style:none; text-align:left; margin-top:26px;}
+.timeline li{display:flex; gap:14px; padding-bottom:26px; position:relative;}
+.timeline li:not(:last-child)::before{content:''; position:absolute; left:13px; top:28px; bottom:0; width:2px; background:var(--card-border);}
+.t-dot{flex:0 0 auto; width:28px; height:28px; border-radius:50%; border:2px solid var(--card-border); display:flex; align-items:center; justify-content:center; background:var(--bg-elev); font-size:.75rem;}
+.timeline li.done .t-dot{border-color:var(--success); background:var(--success); color:#06210F;}
+.timeline li.active .t-dot{border-color:var(--primary); box-shadow:0 0 0 4px rgba(47,143,255,.2);}
+.timeline li.failed .t-dot{border-color:var(--danger); background:var(--danger); color:#fff;}
+.t-title{font-weight:700; font-size:.92rem;}
+.t-sub{font-size:.78rem; color:var(--text-dim);}
+
+/* Badges */
+.badge{display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:999px; font-size:.72rem; font-weight:700;}
+.badge-en_attente{background:rgba(245,158,11,.15); color:var(--warning);}
+.badge-paiement_recu{background:rgba(47,143,255,.15); color:var(--primary-2);}
+.badge-credite{background:rgba(34,197,94,.15); color:var(--success);}
+.badge-rejete{background:rgba(148,163,184,.18); color:var(--text-dim);}
+.badge-fraude{background:rgba(239,68,68,.16); color:var(--danger);}
+
+/* ============================= LOGIN ============================= */
+.auth-wrap{min-height:calc(100vh - 70px); display:flex; align-items:center; justify-content:center; padding:40px 20px;}
+.auth-card{width:100%; max-width:400px; padding:30px;}
+.auth-card h2{text-align:center; margin-bottom:4px;}
+.auth-card .sub{text-align:center; color:var(--text-dim); font-size:.85rem; margin-bottom:22px;}
+.divider{display:flex; align-items:center; gap:10px; color:var(--text-faint); font-size:.75rem; margin:16px 0;}
+.divider::before,.divider::after{content:''; flex:1; height:1px; background:var(--card-border);}
+
+/* ============================= ADMIN ============================= */
+.admin-shell{display:flex; min-height:calc(100vh - 70px);}
+.admin-side{width:220px; flex:0 0 auto; border-right:1px solid var(--card-border); padding:18px 10px; background:var(--bg-alt);}
+.admin-nav-btn{display:flex; align-items:center; gap:10px; width:100%; padding:11px 14px; border-radius:var(--radius-s); background:none; border:none; color:var(--text-dim); font-weight:600; font-size:.88rem; margin-bottom:4px; text-align:left;}
+.admin-nav-btn.active{background:var(--card-bg); color:var(--primary-2);}
+.admin-nav-btn:hover{color:var(--text);}
+.admin-main{flex:1; padding:24px; overflow-x:auto;}
+@media (max-width:800px){.admin-shell{flex-direction:column;} .admin-side{width:100%; display:flex; overflow-x:auto; gap:6px; border-right:none; border-bottom:1px solid var(--card-border);} .admin-nav-btn{white-space:nowrap;}}
+.stat-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:24px;}
+.stat-card{padding:18px;}
+.stat-card .label{font-size:.75rem; color:var(--text-dim); margin-bottom:6px;}
+.stat-card .value{font-family:var(--font-mono); font-size:1.5rem; font-weight:700;}
+.chart-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:16px; margin-bottom:24px;}
+.chart-card{padding:18px; height:280px;}
+.chart-card canvas{max-height:220px;}
+.filter-chips{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;}
+.chip{padding:7px 14px; border-radius:999px; font-size:.78rem; font-weight:600; border:1px solid var(--card-border); background:var(--card-bg); color:var(--text-dim);}
+.chip.active{background:var(--primary); color:#fff; border-color:var(--primary);}
+table.data-table{width:100%; border-collapse:collapse; font-size:.85rem;}
+table.data-table th{text-align:left; padding:10px 12px; color:var(--text-faint); font-size:.72rem; text-transform:uppercase; letter-spacing:.03em; border-bottom:1px solid var(--card-border);}
+table.data-table td{padding:12px; border-bottom:1px solid var(--card-border); vertical-align:middle;}
+table.data-table tr.flash-new{animation:flashRow 1.6s ease;}
+@keyframes flashRow{0%{background:rgba(47,143,255,.25);}100%{background:transparent;}}
+.row-actions{display:flex; gap:6px;}
+.empty-state{text-align:center; padding:40px 20px; color:var(--text-faint);}
+.form-inline{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin-bottom:18px;}
+.form-inline .field{margin-bottom:0; min-width:160px; flex:1;}
+
+/* Toasts */
+#toast-root{position:fixed; top:16px; right:16px; z-index:200; display:flex; flex-direction:column; gap:10px;}
+.toast{padding:13px 18px; border-radius:var(--radius-s); background:var(--card-bg-solid); border:1px solid var(--card-border); box-shadow:var(--shadow); font-size:.85rem; font-weight:600; max-width:320px;}
+.toast.success{border-color:var(--success); color:var(--success);}
+.toast.error{border-color:var(--danger); color:var(--danger);}
+.toast.info{border-color:var(--primary); color:var(--primary-2);}
+@media (prefers-reduced-motion:no-preference){
+  .toast{animation:toast-in .25s ease;}
+}
+@keyframes toast-in{from{transform:translateX(20px); opacity:0;}to{transform:translateX(0); opacity:1;}}
+
+.spinner{width:18px; height:18px; border-radius:50%; border:2.5px solid rgba(255,255,255,.35); border-top-color:#fff; display:inline-block;}
+@media (prefers-reduced-motion:no-preference){.spinner{animation:spin .7s linear infinite;}}
+@keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+<div id="toast-root"></div>
+<div id="app"></div>
+
+<script>
+/* ===================================================================
+   SIMBA — SPA vanilla (HTML+CSS+JS). Aucune dépendance de build.
+   =================================================================== */
+
+/* ------------------------- CONFIGURATION -------------------------- */
+const CONFIG = {
+  // TODO: remplacer une fois le projet Supabase créé
+  SUPABASE_URL: 'https://YOUR-PROJECT-REF.supabase.co',
+  SUPABASE_ANON_KEY: 'YOUR_SUPABASE_ANON_KEY',
+  // Clé de test Cloudflare officielle (valide toujours) — remplacer par la vraie clé en prod.
+  // Cela permet aux formulaires de rester testables tant que Turnstile n'est pas configuré.
+  TURNSTILE_SITE_KEY: '1x00000000000000000000AA',
+  // TODO: générer un token aléatoire sécurisé (ex: openssl rand -hex 24) et le garder secret
+  ADMIN_URL_TOKEN: 'REPLACE_WITH_RANDOM_TOKEN',
+  WAAFI_NUMBER: '77583735',
+  WAAFI_NAME: 'Siad Kawalieh',
+  PROMO_CODE: 'simba10',
+  AFFILIATE_LINK: 'https://reffpa.com/L?tag=d_4904612m_97c_&site=4904612&ad=97',
+  MIN_AMOUNT: 500,
+  // TODO: renseigner les contacts support
+  WHATSAPP_SUPPORT_URL: 'https://wa.me/25377583735',
+  TELEGRAM_SUPPORT_URL: 'https://t.me/simba_support',
+};
+
+/* ------------------------------- I18N ------------------------------ */
+const KP_LANGS = {
+  fr: {
+    'nav.faq':'FAQ', 'nav.install':'Installer l\'app',
+    'hero.eyebrow':'Échange Waafi ⇄ 1xBet',
+    'hero.title1':'Rechargez votre compte', 'hero.title2':'1xBet en 2 minutes',
+    'hero.sub':'Dépôt et retrait instantanés entre Waafi et 1xBet. Simple, rapide, sécurisé.',
+    'hero.promo':'Code promo 1xBet :',
+    'hero.cta':'Créer mon compte 1xBet',
+    'tile.depot.title':'Dépôt', 'tile.depot.desc':'Waafi → 1xBet : rechargez votre compte de jeu',
+    'tile.retrait.title':'Retrait', 'tile.retrait.desc':'1xBet → Waafi : retirez vos gains',
+    'faq.title':'Questions fréquentes', 'faq.sub':'Tout ce qu\'il faut savoir avant de commencer',
+    'support.title':'Besoin d\'aide ?', 'support.sub':'Notre équipe répond rapidement',
+    'back':'Retour',
+    'depot.title':'Dépôt vers 1xBet', 'depot.waafi_number':'Numéro Waafi de réception', 'depot.waafi_name':'Nom du compte',
+    'depot.amount':'Montant (DJF)', 'depot.bet_id':'ID 1xBet (compte à recharger)',
+    'depot.sender_number':'Votre numéro Waafi (expéditeur)', 'depot.transfer_id':'Transfer ID Waafi (preuve de paiement)',
+    'depot.whatsapp':'WhatsApp (optionnel)', 'depot.submit':'Soumettre le dépôt',
+    'retrait.title':'Retrait depuis 1xBet', 'retrait.steps.title':'Comment retirer depuis 1xBet',
+    'retrait.step1':'Ouvrez 1xBet et allez dans « Retrait »', 'retrait.step2':'Choisissez Waafi comme méthode de retrait',
+    'retrait.step3':'Entrez le montant et confirmez sur 1xBet', 'retrait.step4':'Copiez le code de retrait généré',
+    'retrait.step5':'Remplissez le formulaire ci-dessous avec ce code',
+    'retrait.bet_id':'ID 1xBet', 'retrait.amount':'Montant à retirer (DJF)', 'retrait.waafi_reception':'Numéro Waafi de réception',
+    'retrait.code':'Code retrait 1xBet', 'retrait.whatsapp':'WhatsApp (optionnel)', 'retrait.submit':'Soumettre le retrait',
+    'form.required':'Ce champ est requis', 'form.min_amount':'Montant minimum : 500 DJF',
+    'form.transfer_min':'Doit contenir au moins 6 chiffres',
+    'suivi.title':'Suivi de votre ordre', 'suivi.status.en_attente':'En attente',
+    'suivi.status.paiement_recu':'Paiement reçu', 'suivi.status.credite':'Crédité avec succès',
+    'suivi.status.rejete':'Rejeté', 'suivi.status.fraude':'Bloqué (fraude suspectée)',
+    'suivi.not_found':'Ordre introuvable. Vérifiez le lien.',
+    'login.title':'Connexion', 'login.sub':'Espace agents Simba',
+    'login.email':'Email', 'login.password':'Mot de passe', 'login.submit':'Se connecter',
+    'login.google':'Continuer avec Google', 'login.creator_mode':'Mode créateur actif (token URL)',
+    'admin.dashboard':'Dashboard', 'admin.orders':'Ordres', 'admin.reserves':'Réserves',
+    'admin.agents':'Agents', 'admin.notifications':'Notifications', 'admin.testpay':'Test Paiement',
+    'admin.logout':'Déconnexion',
+  },
+  en: {
+    'nav.faq':'FAQ', 'nav.install':'Install app',
+    'hero.eyebrow':'Waafi ⇄ 1xBet exchange',
+    'hero.title1':'Top up your', 'hero.title2':'1xBet account in 2 minutes',
+    'hero.sub':'Instant deposits and withdrawals between Waafi and 1xBet. Simple, fast, secure.',
+    'hero.promo':'1xBet promo code:',
+    'hero.cta':'Create my 1xBet account',
+    'tile.depot.title':'Deposit', 'tile.depot.desc':'Waafi → 1xBet: top up your betting account',
+    'tile.retrait.title':'Withdraw', 'tile.retrait.desc':'1xBet → Waafi: withdraw your winnings',
+    'faq.title':'Frequently asked questions', 'faq.sub':'Everything you need to know before you start',
+    'support.title':'Need help?', 'support.sub':'Our team replies quickly',
+    'back':'Back',
+    'depot.title':'Deposit to 1xBet', 'depot.waafi_number':'Receiving Waafi number', 'depot.waafi_name':'Account name',
+    'depot.amount':'Amount (DJF)', 'depot.bet_id':'1xBet ID (account to top up)',
+    'depot.sender_number':'Your Waafi number (sender)', 'depot.transfer_id':'Waafi Transfer ID (proof of payment)',
+    'depot.whatsapp':'WhatsApp (optional)', 'depot.submit':'Submit deposit',
+    'retrait.title':'Withdraw from 1xBet', 'retrait.steps.title':'How to withdraw from 1xBet',
+    'retrait.step1':'Open 1xBet and go to "Withdraw"', 'retrait.step2':'Choose Waafi as withdrawal method',
+    'retrait.step3':'Enter amount and confirm on 1xBet', 'retrait.step4':'Copy the generated withdrawal code',
+    'retrait.step5':'Fill in the form below with that code',
+    'retrait.bet_id':'1xBet ID', 'retrait.amount':'Amount to withdraw (DJF)', 'retrait.waafi_reception':'Receiving Waafi number',
+    'retrait.code':'1xBet withdrawal code', 'retrait.whatsapp':'WhatsApp (optional)', 'retrait.submit':'Submit withdrawal',
+    'form.required':'This field is required', 'form.min_amount':'Minimum amount: 500 DJF',
+    'form.transfer_min':'Must contain at least 6 digits',
+    'suivi.title':'Track your order', 'suivi.status.en_attente':'Pending',
+    'suivi.status.paiement_recu':'Payment received', 'suivi.status.credite':'Successfully credited',
+    'suivi.status.rejete':'Rejected', 'suivi.status.fraude':'Blocked (suspected fraud)',
+    'suivi.not_found':'Order not found. Check the link.',
+    'login.title':'Login', 'login.sub':'Simba staff area',
+    'login.email':'Email', 'login.password':'Password', 'login.submit':'Sign in',
+    'login.google':'Continue with Google', 'login.creator_mode':'Creator mode active (URL token)',
+    'admin.dashboard':'Dashboard', 'admin.orders':'Orders', 'admin.reserves':'Reserves',
+    'admin.agents':'Agents', 'admin.notifications':'Notifications', 'admin.testpay':'Test Payment',
+    'admin.logout':'Log out',
+  }
+};
+let currentLang = localStorage.getItem('simba_lang') || 'fr';
+function t(key){ return (KP_LANGS[currentLang] && KP_LANGS[currentLang][key]) || (KP_LANGS.fr[key]) || key; }
+function setLang(lang){
+  currentLang = lang; localStorage.setItem('simba_lang', lang);
+  document.documentElement.lang = lang;
+  route();
+}
+
+/* ------------------------------ THEME ------------------------------ */
+function setTheme(theme){
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('simba_theme', theme);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', theme === 'dark' ? '#060B14' : '#EAF3FF');
+}
+setTheme(localStorage.getItem('simba_theme') || 'dark');
+
+/* ------------------------------ TOASTS ------------------------------ */
+function toast(message, type){
+  type = type || 'info';
+  const root = document.getElementById('toast-root');
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.textContent = message;
+  root.appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(() => el.remove(), 300); }, 4200);
+}
+
+/* ------------------------------ SUPABASE ----------------------------- */
+const sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+});
+
+/* ------------------------------ APP STATE ---------------------------- */
+const state = {
+  session: null,
+  agent: null,          // { id, name, email, role } issu de la table agents
+  isCreatorBypass: false,
+  effectiveRole: null,  // 'createur' | 'admin' | 'agent_paiement' | 'support' | 'observateur' | null
+  adminTab: 'dashboard',
+  deferredInstallPrompt: null,
+  ordersRealtimeChannel: null,
+  suiviChannel: null,
+};
+
+function checkCreatorBypass(){
+  const params = new URLSearchParams(location.search);
+  const kp = params.get('kp');
+  if (kp && CONFIG.ADMIN_URL_TOKEN !== 'REPLACE_WITH_RANDOM_TOKEN' && kp === CONFIG.ADMIN_URL_TOKEN){
+    sessionStorage.setItem('simba_kp', '1');
+  }
+  state.isCreatorBypass = sessionStorage.getItem('simba_kp') === '1';
+}
+
+function computeEffectiveRole(){
+  if (state.isCreatorBypass) { state.effectiveRole = 'createur'; return; }
+  state.effectiveRole = state.agent ? state.agent.role : null;
+}
+
+/* API fetch helper : joint le JWT Supabase et/ou le token créateur */
+async function apiFetch(path, options){
+  options = options || {};
+  const headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
+  if (state.session && state.session.access_token) headers['Authorization'] = 'Bearer ' + state.session.access_token;
+  if (state.isCreatorBypass) headers['x-admin-token'] = CONFIG.ADMIN_URL_TOKEN;
+  const res = await fetch('/api/' + path, {
+    method: options.method || 'GET',
+    headers,
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || ('Erreur API (' + res.status + ')'));
+  return data;
+}
+
+/* ------------------------------ ROUTER ------------------------------- */
+function route(){
+  const hash = location.hash || '#/';
+  const app = document.getElementById('app');
+  window.scrollTo(0,0);
+  teardownRealtime();
+
+  if (hash.startsWith('#suivi-')) { renderSuivi(app, hash.slice(7)); return; }
+  if (hash === '#depot') { renderDepot(app); return; }
+  if (hash === '#retrait') { renderRetrait(app); return; }
+  if (hash === '#login') { renderLogin(app); return; }
+  if (hash === '#admin') {
+    if (!state.effectiveRole) { renderLogin(app); return; }
+    renderAdmin(app); return;
+  }
+  renderHome(app);
+}
+window.addEventListener('hashchange', route);
+
+function teardownRealtime(){
+  if (state.ordersRealtimeChannel){ sb.removeChannel(state.ordersRealtimeChannel); state.ordersRealtimeChannel = null; }
+  if (state.suiviChannel){ sb.removeChannel(state.suiviChannel); state.suiviChannel = null; }
+}
+
+/* ------------------------------ HEADER ------------------------------- */
+function headerHtml(showBack, backHash){
+  return `
+  <header class="site">
+    <div class="header-inner">
+      ${showBack ? `
+        <a class="back-btn" href="${backHash || '#/'}" aria-label="${t('back')}">←</a>
+      ` : `
+        <a href="#/" class="logo" style="text-decoration:none;">
+          <span class="logo-mark">S</span>
+          <span>Simba<span class="tagline-small">Waafi ⇄ 1xBet</span></span>
+        </a>
+      `}
+      <div class="header-actions">
+        <button class="icon-btn" id="btn-lang" title="FR/EN">${currentLang.toUpperCase()}</button>
+        <button class="icon-btn" id="btn-theme" title="Theme">${document.documentElement.getAttribute('data-theme')==='dark' ? '☀️' : '🌙'}</button>
+        <span class="status-pill"><span class="status-dot"></span> Connecté</span>
+      </div>
+    </div>
+  </header>`;
+}
+function bindHeaderEvents(){
+  const langBtn = document.getElementById('btn-lang');
+  if (langBtn) langBtn.addEventListener('click', () => setLang(currentLang === 'fr' ? 'en' : 'fr'));
+  const themeBtn = document.getElementById('btn-theme');
+  if (themeBtn) themeBtn.addEventListener('click', () => {
+    const cur = document.documentElement.getAttribute('data-theme');
+    setTheme(cur === 'dark' ? 'light' : 'dark');
+    route();
+  });
+}
+
+/* ------------------------------ HOME ---------------------------------- */
+function renderHome(app){
+  app.innerHTML = `
+    ${headerHtml(false)}
+    <section class="hero">
+      <div class="hero-bg"><div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div></div>
+      <div class="container hero-content">
+        <span class="eyebrow">⚡ ${t('hero.eyebrow')}</span>
+        <h1>${t('hero.title1')} <span>${t('hero.title2')}</span></h1>
+        <p class="sub">${t('hero.sub')}</p>
+        <div class="promo-row">
+          <div class="promo-code">
+            <span>${t('hero.promo')} ${CONFIG.PROMO_CODE}</span>
+            <button id="copy-promo" title="Copier">📋</button>
+          </div>
+          <a class="btn btn-primary" href="${CONFIG.AFFILIATE_LINK}" target="_blank" rel="noopener">${t('hero.cta')}</a>
+        </div>
+        <div class="card action-card">
+          <div class="action-grid">
+            <a href="#depot" class="action-tile tile-depot">
+              <div class="tile-icon">⬇️</div>
+              <div class="tile-title">${t('tile.depot.title')}</div>
+              <div class="tile-desc">${t('tile.depot.desc')}</div>
+            </a>
+            <a href="#retrait" class="action-tile tile-retrait">
+              <div class="tile-icon">⬆️</div>
+              <div class="tile-title">${t('tile.retrait.title')}</div>
+              <div class="tile-desc">${t('tile.retrait.desc')}</div>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="container">
+      <div class="section-title">
+        <h2>${t('faq.title')}</h2>
+        <p>${t('faq.sub')}</p>
+      </div>
+      <div id="faq-list" style="max-width:680px;margin:0 auto;"></div>
+    </section>
+
+    <section class="container" style="text-align:center;">
+      <div class="section-title">
+        <h2>${t('support.title')}</h2>
+        <p>${t('support.sub')}</p>
+      </div>
+      <div class="support-row">
+        <a class="btn btn-outline" href="${CONFIG.WHATSAPP_SUPPORT_URL}" target="_blank" rel="noopener">💬 WhatsApp</a>
+        <a class="btn btn-outline" href="${CONFIG.TELEGRAM_SUPPORT_URL}" target="_blank" rel="noopener">✈️ Telegram</a>
+        <button class="btn btn-outline" id="btn-install">📲 ${t('nav.install')}</button>
+      </div>
+    </section>
+
+    <footer class="site">
+      <div class="container">© ${new Date().getFullYear()} Simba — Waafi ⇄ 1xBet</div>
+    </footer>
+  `;
+  bindHeaderEvents();
+
+  document.getElementById('copy-promo').addEventListener('click', () => {
+    navigator.clipboard.writeText(CONFIG.PROMO_CODE).then(() => toast(currentLang==='fr' ? 'Code copié' : 'Code copied', 'success'));
+  });
+
+  const faqData = currentLang === 'fr' ? [
+    ['Combien de temps prend un dépôt ?', 'En général entre 1 et 5 minutes après réception du paiement Waafi.'],
+    ['Quel est le montant minimum ?', `Le montant minimum pour un dépôt ou un retrait est de ${CONFIG.MIN_AMOUNT} DJF.`],
+    ['Comment suivre mon ordre ?', 'Après soumission, vous recevez un lien de suivi en temps réel (#suivi-XXXX).'],
+    ['Le code promo est-il obligatoire ?', `Non, mais utiliser "${CONFIG.PROMO_CODE}" vous donne un bonus à l'inscription 1xBet.`],
+    ['Que faire si mon transfert échoue ?', 'Contactez notre support WhatsApp ou Telegram avec votre référence d\'ordre.'],
+  ] : [
+    ['How long does a deposit take?', 'Usually between 1 and 5 minutes after the Waafi payment is received.'],
+    ['What is the minimum amount?', `The minimum amount for a deposit or withdrawal is ${CONFIG.MIN_AMOUNT} DJF.`],
+    ['How do I track my order?', 'After submitting, you get a real-time tracking link (#suivi-XXXX).'],
+    ['Is the promo code required?', `No, but using "${CONFIG.PROMO_CODE}" gives you a bonus on 1xBet signup.`],
+    ['What if my transfer fails?', 'Contact our WhatsApp or Telegram support with your order reference.'],
+  ];
+  const faqList = document.getElementById('faq-list');
+  faqList.innerHTML = faqData.map((f, i) => `
+    <div class="faq-item" data-i="${i}">
+      <button class="faq-q">${f[0]} <span class="chev">▾</span></button>
+      <div class="faq-a">${f[1]}</div>
+    </div>
+  `).join('');
+  faqList.querySelectorAll('.faq-item').forEach(item => {
+    item.querySelector('.faq-q').addEventListener('click', () => item.classList.toggle('open'));
+  });
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    state.deferredInstallPrompt = e;
+  });
+  document.getElementById('btn-install').addEventListener('click', async () => {
+    if (!state.deferredInstallPrompt) { toast(currentLang==='fr' ? 'Déjà installable via le menu du navigateur' : 'Already installable via browser menu', 'info'); return; }
+    state.deferredInstallPrompt.prompt();
+    await state.deferredInstallPrompt.userChoice;
+    state.deferredInstallPrompt = null;
+  });
+}
+
+/* ------------------------------ TURNSTILE HELPER ----------------------- */
+function renderTurnstile(containerId, onToken){
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  function tryRender(retries){
+    if (window.turnstile && typeof window.turnstile.render === 'function'){
+      window.turnstile.render('#' + containerId, {
+        sitekey: CONFIG.TURNSTILE_SITE_KEY,
+        callback: onToken,
+        theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light',
+      });
+    } else if (retries > 0){
+      setTimeout(() => tryRender(retries - 1), 300);
+    }
+  }
+  tryRender(20);
+}
+
+/* ------------------------------ DEPOT PAGE ------------------------------ */
+function renderDepot(app){
+  let turnstileToken = '';
+  app.innerHTML = `
+    ${headerHtml(true, '#/')}
+    <div class="container form-page">
+      <div class="page-header"><h1>${t('depot.title')}</h1></div>
+      <div class="info-box">
+        <div><div class="label">${t('depot.waafi_number')}</div><div class="value mono">${CONFIG.WAAFI_NUMBER}</div></div>
+        <div style="text-align:right;"><div class="label">${t('depot.waafi_name')}</div><div class="value" style="font-size:.95rem;">${CONFIG.WAAFI_NAME}</div></div>
+      </div>
+      <form id="form-depot" class="card" novalidate>
+        <div class="field">
+          <label for="d-amount">${t('depot.amount')}</label>
+          <input type="number" id="d-amount" class="mono-input" min="${CONFIG.MIN_AMOUNT}" step="1" required>
+          <div class="hint">${t('form.min_amount')}</div>
+        </div>
+        <div class="field">
+          <label for="d-betid">${t('depot.bet_id')}</label>
+          <input type="text" id="d-betid" required>
+        </div>
+        <div class="field">
+          <label for="d-sender">${t('depot.sender_number')}</label>
+          <input type="tel" id="d-sender" class="mono-input" required>
+        </div>
+        <div class="field">
+          <label for="d-transfer">${t('depot.transfer_id')}</label>
+          <input type="text" id="d-transfer" class="mono-input" required>
+          <div class="hint">${t('form.transfer_min')}</div>
+        </div>
+        <div class="field">
+          <label for="d-whatsapp">${t('depot.whatsapp')}</label>
+          <input type="tel" id="d-whatsapp">
+        </div>
+        <div id="turnstile-depot" style="margin-bottom:16px;"></div>
+        <button type="submit" class="btn btn-primary btn-block" id="d-submit">${t('depot.submit')}</button>
+      </form>
+    </div>
+  `;
+  bindHeaderEvents();
+  renderTurnstile('turnstile-depot', (token) => { turnstileToken = token; });
+
+  document.getElementById('form-depot').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const amount = Number(document.getElementById('d-amount').value);
+    const betId = document.getElementById('d-betid').value.trim();
+    const sender = document.getElementById('d-sender').value.trim();
+    const transferId = document.getElementById('d-transfer').value.trim();
+    const whatsapp = document.getElementById('d-whatsapp').value.trim();
+
+    if (!amount || amount < CONFIG.MIN_AMOUNT) return toast(t('form.min_amount'), 'error');
+    if (!betId || !sender) return toast(t('form.required'), 'error');
+
+    const btn = document.getElementById('d-submit');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+    try {
+      const { data, error } = await sb.from('depot_orders').insert({
+        montant: amount, id_bet1x: betId, numero_waafi_expediteur: sender,
+        transfer_id: transferId || null, whatsapp: whatsapp || null,
+        turnstile_token: turnstileToken || null, lang: currentLang,
+      }).select('id').single();
+      if (error) throw error;
+      location.hash = '#suivi-' + data.id;
+    } catch (err) {
+      toast(err.message || 'Erreur', 'error');
+      btn.disabled = false; btn.textContent = t('depot.submit');
+    }
+  });
+}
+
+/* ------------------------------ RETRAIT PAGE ------------------------------ */
+function renderRetrait(app){
+  let turnstileToken = '';
+  app.innerHTML = `
+    ${headerHtml(true, '#/')}
+    <div class="container form-page">
+      <div class="page-header"><h1>${t('retrait.title')}</h1></div>
+      <div class="card" style="margin-bottom:18px;">
+        <h3 style="font-size:1rem;margin-bottom:6px;">${t('retrait.steps.title')}</h3>
+        <ol class="steps">
+          <li>${t('retrait.step1')}</li>
+          <li>${t('retrait.step2')}</li>
+          <li>${t('retrait.step3')}</li>
+          <li>${t('retrait.step4')}</li>
+          <li>${t('retrait.step5')}</li>
+        </ol>
+      </div>
+      <form id="form-retrait" class="card" novalidate>
+        <div class="field">
+          <label for="r-betid">${t('retrait.bet_id')}</label>
+          <input type="text" id="r-betid" required>
+        </div>
+        <div class="field">
+          <label for="r-amount">${t('retrait.amount')}</label>
+          <input type="number" id="r-amount" class="mono-input" min="${CONFIG.MIN_AMOUNT}" step="1" required>
+          <div class="hint">${t('form.min_amount')}</div>
+        </div>
+        <div class="field">
+          <label for="r-waafi">${t('retrait.waafi_reception')}</label>
+          <input type="tel" id="r-waafi" class="mono-input" required>
+        </div>
+        <div class="field">
+          <label for="r-code">${t('retrait.code')}</label>
+          <input type="text" id="r-code" class="mono-input" required>
+        </div>
+        <div class="field">
+          <label for="r-whatsapp">${t('retrait.whatsapp')}</label>
+          <input type="tel" id="r-whatsapp">
+        </div>
+        <div id="turnstile-retrait" style="margin-bottom:16px;"></div>
+        <button type="submit" class="btn btn-primary btn-block" id="r-submit">${t('retrait.submit')}</button>
+      </form>
+    </div>
+  `;
+  bindHeaderEvents();
+  renderTurnstile('turnstile-retrait', (token) => { turnstileToken = token; });
+
+  document.getElementById('form-retrait').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const betId = document.getElementById('r-betid').value.trim();
+    const amount = Number(document.getElementById('r-amount').value);
+    const waafi = document.getElementById('r-waafi').value.trim();
+    const code = document.getElementById('r-code').value.trim();
+    const whatsapp = document.getElementById('r-whatsapp').value.trim();
+
+    if (!amount || amount < CONFIG.MIN_AMOUNT) return toast(t('form.min_amount'), 'error');
+    if (!betId || !waafi || !code) return toast(t('form.required'), 'error');
+
+    const btn = document.getElementById('r-submit');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+    try {
+      const { data, error } = await sb.from('retrait_orders').insert({
+        montant: amount, id_bet1x: betId, numero_waafi_reception: waafi,
+        code_retrait_1x: code, whatsapp: whatsapp || null,
+        turnstile_token: turnstileToken || null, lang: currentLang,
+      }).select('id').single();
+      if (error) throw error;
+      location.hash = '#suivi-' + data.id;
+    } catch (err) {
+      toast(err.message || 'Erreur', 'error');
+      btn.disabled = false; btn.textContent = t('retrait.submit');
+    }
+  });
+}
+
+/* ------------------------------ SUIVI PAGE ------------------------------ */
+function orderType(id){ return id.startsWith('R') ? 'retrait' : 'depot'; }
+
+function timelineHtml(status){
+  const steps = [
+    { key:'en_attente', label:t('suivi.status.en_attente') },
+    { key:'paiement_recu', label:t('suivi.status.paiement_recu') },
+    { key:'credite', label:t('suivi.status.credite') },
+  ];
+  const failed = status === 'rejete' || status === 'fraude';
+  const order = ['en_attente','paiement_recu','credite'];
+  const curIdx = order.indexOf(status);
+  return `<ul class="timeline">` + steps.map((s, i) => {
+    let cls = '';
+    if (failed && i === order.length - 1) { /* last step becomes failure marker below */ }
+    if (!failed){
+      if (i < curIdx) cls = 'done'; else if (i === curIdx) cls = 'active';
+    } else {
+      if (i < 1) cls = 'done';
+    }
+    const icon = cls === 'done' ? '✓' : (cls === 'active' ? '●' : '');
+    return `<li class="${cls}"><div class="t-dot">${icon}</div><div><div class="t-title">${s.label}</div></div></li>`;
+  }).join('') + (failed ? `
+    <li class="failed"><div class="t-dot">✕</div><div><div class="t-title">${t('suivi.status.' + status)}</div></div></li>
+  ` : '') + `</ul>`;
+}
+
+function renderSuivi(app, orderId){
+  const type = orderType(orderId);
+  app.innerHTML = `
+    ${headerHtml(true, '#/')}
+    <div class="container">
+      <div class="card suivi-card" id="suivi-content">
+        <div class="spinner" style="width:28px;height:28px;border-width:3px;margin:0 auto;"></div>
+      </div>
+    </div>
+  `;
+  bindHeaderEvents();
+
+  async function load(){
+    const { data, error } = await sb.rpc('get_order_status', { p_order_id: orderId, p_type: type });
+    const content = document.getElementById('suivi-content');
+    if (error || !data || data.length === 0){
+      content.innerHTML = `<p>${t('suivi.not_found')}</p>`;
+      return;
+    }
+    renderOrderStatus(content, data[0]);
+  }
+  function renderOrderStatus(content, order){
+    content.innerHTML = `
+      <h2>${t('suivi.title')}</h2>
+      <div class="suivi-id mono">#${order.id}</div>
+      <div class="badge badge-${order.status}">${t('suivi.status.' + order.status)}</div>
+      <div style="margin-top:14px;color:var(--text-dim);font-family:var(--font-mono);">${Number(order.montant).toLocaleString()} DJF</div>
+      ${timelineHtml(order.status)}
+    `;
+  }
+  load();
+
+  // Broadcast from Database : suivi public en temps réel, sans exposer la table complète.
+  state.suiviChannel = sb.channel('order-updates:' + orderId, { config: { private: true } })
+    .on('broadcast', { event: '*' }, () => load())
+    .subscribe();
+}
+
+/* ------------------------------ LOGIN PAGE ------------------------------ */
+function renderLogin(app){
+  app.innerHTML = `
+    ${headerHtml(true, '#/')}
+    <div class="auth-wrap">
+      <div class="card auth-card">
+        <h2>${t('login.title')}</h2>
+        <p class="sub">${t('login.sub')}</p>
+        ${state.isCreatorBypass ? `<p class="badge badge-credite" style="margin-bottom:14px;">${t('login.creator_mode')}</p>` : ''}
+        <form id="form-login">
+          <div class="field"><label>${t('login.email')}</label><input type="email" id="l-email" required></div>
+          <div class="field"><label>${t('login.password')}</label><input type="password" id="l-password" required></div>
+          <button type="submit" class="btn btn-primary btn-block" id="l-submit">${t('login.submit')}</button>
+        </form>
+        <div class="divider">OR</div>
+        <button class="btn btn-outline btn-block" id="btn-google">🔍 ${t('login.google')}</button>
+        ${state.isCreatorBypass ? `<button class="btn btn-success btn-block" id="btn-creator-continue" style="margin-top:10px;">→ Admin</button>` : ''}
+      </div>
+    </div>
+  `;
+  bindHeaderEvents();
+
+  document.getElementById('form-login').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('l-email').value.trim();
+    const password = document.getElementById('l-password').value;
+    const btn = document.getElementById('l-submit');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+    try {
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      await refreshAuthState();
+      location.hash = '#admin';
+    } catch (err) {
+      toast(err.message, 'error');
+      btn.disabled = false; btn.textContent = t('login.submit');
+    }
+  });
+
+  document.getElementById('btn-google').addEventListener('click', async () => {
+    await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + '/#admin' } });
+  });
+
+  const creatorBtn = document.getElementById('btn-creator-continue');
+  if (creatorBtn) creatorBtn.addEventListener('click', () => { location.hash = '#admin'; });
+}
+
+/* ------------------------------ AUTH STATE ------------------------------ */
+async function refreshAuthState(){
+  const { data: { session } } = await sb.auth.getSession();
+  state.session = session;
+  if (session && session.user){
+    const { data: agentRow } = await sb.from('agents').select('id,name,email,role').eq('id', session.user.id).maybeSingle();
+    state.agent = agentRow || null;
+  } else {
+    state.agent = null;
+  }
+  computeEffectiveRole();
+}
+sb.auth.onAuthStateChange(async (_event, session) => {
+  state.session = session;
+  if (session && session.user){
+    const { data: agentRow } = await sb.from('agents').select('id,name,email,role').eq('id', session.user.id).maybeSingle();
+    state.agent = agentRow || null;
+  } else {
+    state.agent = null;
+  }
+  computeEffectiveRole();
+});
+
+/* ------------------------------ ADMIN PANEL ------------------------------ */
+const ADMIN_TABS = [
+  { key:'dashboard', icon:'📊', roles:['createur','admin','agent_paiement','support','observateur'] },
+  { key:'orders', icon:'🧾', roles:['createur','admin','agent_paiement','support','observateur'] },
+  { key:'reserves', icon:'💰', roles:['createur','admin'] },
+  { key:'agents', icon:'👥', roles:['createur','admin'] },
+  { key:'notifications', icon:'🔔', roles:['createur','admin','support'] },
+  { key:'testpay', icon:'🧪', roles:['createur','admin'] },
+];
+
+function renderAdmin(app){
+  const visibleTabs = ADMIN_TABS.filter(tab => tab.roles.includes(state.effectiveRole));
+  if (!visibleTabs.find(t2 => t2.key === state.adminTab)) state.adminTab = visibleTabs[0].key;
+
+  app.innerHTML = `
+    ${headerHtml(true, '#/')}
+    <div class="admin-shell">
+      <aside class="admin-side">
+        ${visibleTabs.map(tabDef => `
+          <button class="admin-nav-btn ${state.adminTab === tabDef.key ? 'active' : ''}" data-tab="${tabDef.key}">
+            ${tabDef.icon} ${t('admin.' + tabDef.key)}
+          </button>
+        `).join('')}
+        <button class="admin-nav-btn" id="admin-logout">🚪 ${t('admin.logout')}</button>
+      </aside>
+      <main class="admin-main" id="admin-main"></main>
+    </div>
+  `;
+  bindHeaderEvents();
+  app.querySelectorAll('.admin-nav-btn[data-tab]').forEach(btn => {
+    btn.addEventListener('click', () => { state.adminTab = btn.dataset.tab; renderAdmin(app); });
+  });
+  document.getElementById('admin-logout').addEventListener('click', async () => {
+    await sb.auth.signOut();
+    sessionStorage.removeItem('simba_kp');
+    state.isCreatorBypass = false; state.agent = null; state.effectiveRole = null;
+    location.hash = '#/';
+  });
+
+  const main = document.getElementById('admin-main');
+  if (state.adminTab === 'dashboard') renderAdminDashboard(main);
+  else if (state.adminTab === 'orders') renderAdminOrders(main);
+  else if (state.adminTab === 'reserves') renderAdminReserves(main);
+  else if (state.adminTab === 'agents') renderAdminAgents(main);
+  else if (state.adminTab === 'notifications') renderAdminNotifications(main);
+  else if (state.adminTab === 'testpay') renderAdminTestPay(main);
+}
+
+/* --- Dashboard --- */
+function renderAdminDashboard(main){
+  main.innerHTML = `
+    <div class="filter-chips" id="range-chips">
+      ${['today','yesterday','7d','30d','all'].map(r => `<button class="chip ${r==='today'?'active':''}" data-range="${r}">${({today:"Aujourd'hui",yesterday:'Hier','7d':'7j','30d':'30j',all:'Tout'})[r]}</button>`).join('')}
+    </div>
+    <div class="stat-grid" id="stat-grid"><div class="card stat-card">…</div></div>
+    <div class="chart-grid">
+      <div class="card chart-card"><h4 style="margin-bottom:10px;font-size:.85rem;color:var(--text-dim);">Volume / heure</h4><canvas id="chart-volume"></canvas></div>
+      <div class="card chart-card"><h4 style="margin-bottom:10px;font-size:.85rem;color:var(--text-dim);">Bénéfice</h4><canvas id="chart-profit"></canvas></div>
+      <div class="card chart-card"><h4 style="margin-bottom:10px;font-size:.85rem;color:var(--text-dim);">Dépôts / Retraits</h4><canvas id="chart-split"></canvas></div>
+    </div>
+  `;
+  let charts = {};
+  async function load(range){
+    try {
+      const stats = await apiFetch('admin-stats?range=' + range);
+      const statGrid = document.getElementById('stat-grid');
+      statGrid.innerHTML = `
+        <div class="card stat-card"><div class="label">Total ordres</div><div class="value">${stats.totals.orders}</div></div>
+        <div class="card stat-card"><div class="label">Dépôts</div><div class="value">${stats.totals.depots}</div></div>
+        <div class="card stat-card"><div class="label">Retraits</div><div class="value">${stats.totals.retraits}</div></div>
+        <div class="card stat-card"><div class="label">Volume DJF</div><div class="value">${Number(stats.totals.volume||0).toLocaleString()}</div></div>
+        ${state.effectiveRole === 'createur' ? `<div class="card stat-card"><div class="label">Bénéfice</div><div class="value" style="color:var(--success);">${Number(stats.totals.profit||0).toLocaleString()}</div></div>` : ''}
+      `;
+      Object.values(charts).forEach(c => c.destroy());
+      const ctxVol = document.getElementById('chart-volume');
+      charts.volume = new Chart(ctxVol, { type:'bar', data:{ labels: (stats.byHour||[]).map(h=>h.hour), datasets:[{ label:'Volume', data:(stats.byHour||[]).map(h=>h.volume), backgroundColor:'#2F8FFF' }] }, options:{ plugins:{legend:{display:false}}, responsive:true, maintainAspectRatio:false } });
+      const ctxProfit = document.getElementById('chart-profit');
+      charts.profit = new Chart(ctxProfit, { type:'line', data:{ labels:(stats.profitByDay||[]).map(p=>p.day), datasets:[{ label:'Bénéfice', data:(stats.profitByDay||[]).map(p=>p.profit), borderColor:'#22C55E', tension:.35 }] }, options:{ plugins:{legend:{display:false}}, responsive:true, maintainAspectRatio:false } });
+      const ctxSplit = document.getElementById('chart-split');
+      charts.split = new Chart(ctxSplit, { type:'doughnut', data:{ labels:['Dépôts','Retraits'], datasets:[{ data:[stats.totals.depots, stats.totals.retraits], backgroundColor:['#22C55E','#2F8FFF'] }] }, options:{ responsive:true, maintainAspectRatio:false } });
+    } catch (err) { toast(err.message, 'error'); }
+  }
+  document.querySelectorAll('#range-chips .chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('#range-chips .chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      load(chip.dataset.range);
+    });
+  });
+  load('today');
+}
+
+/* --- Orders --- */
+function renderAdminOrders(main){
+  main.innerHTML = `
+    <div class="filter-chips" id="order-chips">
+      ${['tous','en_attente','depots','retraits','credite','rejete','fraude'].map(f => `<button class="chip ${f==='tous'?'active':''}" data-filter="${f}">${f}</button>`).join('')}
+    </div>
+    <div class="card" style="padding:0;overflow-x:auto;">
+      <table class="data-table" id="orders-table">
+        <thead><tr><th>ID</th><th>Type</th><th>Statut</th><th>Montant</th><th>ID 1xBet</th><th>Créé</th><th></th></tr></thead>
+        <tbody id="orders-tbody"></tbody>
+      </table>
+    </div>
+  `;
+  if (!state.session){
+    document.getElementById('orders-tbody').innerHTML = `<tr><td colspan="7"><div class="empty-state">Connectez-vous avec un compte Supabase Auth pour voir les ordres en temps réel.</div></td></tr>`;
+    return;
+  }
+
+  let allOrders = [];
+  let currentFilter = 'tous';
+
+  function passesFilter(o){
+    if (currentFilter === 'tous') return true;
+    if (currentFilter === 'depots') return o.type === 'depot';
+    if (currentFilter === 'retraits') return o.type === 'retrait';
+    return o.status === currentFilter;
+  }
+
+  function renderRows(newId){
+    const tbody = document.getElementById('orders-tbody');
+    const rows = allOrders.filter(passesFilter).sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+    if (rows.length === 0){ tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">Aucun ordre</div></td></tr>`; return; }
+    tbody.innerHTML = rows.map(o => `
+      <tr class="${o.id === newId ? 'flash-new' : ''}">
+        <td class="mono">${o.id}</td>
+        <td>${o.type}</td>
+        <td><span class="badge badge-${o.status}">${o.status}</span></td>
+        <td class="mono">${Number(o.montant).toLocaleString()}</td>
+        <td class="mono">${o.id_bet1x || ''}</td>
+        <td>${new Date(o.created_at).toLocaleString()}</td>
+        <td class="row-actions">
+          ${o.status === 'en_attente' || o.status === 'paiement_recu' ? `
+            <button class="btn btn-sm btn-success" data-act="confirmer" data-id="${o.id}" data-type="${o.type}">✓</button>
+            <button class="btn btn-sm btn-danger" data-act="rejeter" data-id="${o.id}" data-type="${o.type}">✕</button>
+            <button class="btn btn-sm btn-outline" data-act="fraude" data-id="${o.id}" data-type="${o.type}">⚠</button>
+          ` : ''}
+        </td>
+      </tr>
+    `).join('');
+    tbody.querySelectorAll('button[data-act]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        try {
+          await apiFetch('admin-action-ordre', { method:'POST', body:{ order_id: btn.dataset.id, type: btn.dataset.type, action: btn.dataset.act } });
+          toast('Action appliquée', 'success');
+        } catch (err) { toast(err.message, 'error'); btn.disabled = false; }
+      });
+    });
+  }
+
+  function beep(){
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator(); const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = 880; gain.gain.value = .06;
+      osc.start(); setTimeout(() => { osc.stop(); ctx.close(); }, 180);
+    } catch (e) {}
+  }
+
+  async function loadAll(){
+    const [{ data: depots }, { data: retraits }] = await Promise.all([
+      sb.from('depot_orders').select('*').order('created_at', { ascending:false }).limit(200),
+      sb.from('retrait_orders').select('*').order('created_at', { ascending:false }).limit(200),
+    ]);
+    allOrders = [
+      ...(depots || []).map(o => Object.assign({}, o, { type:'depot' })),
+      ...(retraits || []).map(o => Object.assign({}, o, { type:'retrait' })),
+    ];
+    renderRows();
+  }
+
+  document.querySelectorAll('#order-chips .chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('#order-chips .chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      currentFilter = chip.dataset.filter;
+      renderRows();
+    });
+  });
+
+  loadAll();
+
+  state.ordersRealtimeChannel = sb.channel('admin-orders')
+    .on('postgres_changes', { event:'*', schema:'public', table:'depot_orders' }, (payload) => {
+      upsertOrder(payload, 'depot');
+    })
+    .on('postgres_changes', { event:'*', schema:'public', table:'retrait_orders' }, (payload) => {
+      upsertOrder(payload, 'retrait');
+    })
+    .subscribe();
+
+  function upsertOrder(payload, type){
+    const row = Object.assign({}, payload.new || payload.old, { type });
+    const idx = allOrders.findIndex(o => o.id === row.id && o.type === type);
+    const isNew = payload.eventType === 'INSERT';
+    if (idx >= 0) allOrders[idx] = row; else allOrders.unshift(row);
+    renderRows(isNew ? row.id : null);
+    if (isNew) beep();
+  }
+}
+
+/* --- Reserves --- */
+function renderAdminReserves(main){
+  main.innerHTML = `<div class="card" style="max-width:420px;"><div id="reserves-form">Chargement…</div></div>`;
+  sb.from('config_reserves').select('*').eq('id', 1).maybeSingle().then(({ data, error }) => {
+    const el = document.getElementById('reserves-form');
+    if (error || !data){ el.innerHTML = `<div class="empty-state">Erreur de chargement</div>`; return; }
+    el.innerHTML = `
+      <div class="field"><label>Réserve 1xBet</label><input type="number" id="res-xbet" class="mono-input" value="${data.xbet}"></div>
+      <div class="field"><label>Réserve Waafi</label><input type="number" id="res-waafi" class="mono-input" value="${data.waafi}"></div>
+      <button class="btn btn-primary btn-block" id="res-save">Enregistrer</button>
+    `;
+    document.getElementById('res-save').addEventListener('click', async () => {
+      const xbet = Number(document.getElementById('res-xbet').value);
+      const waafi = Number(document.getElementById('res-waafi').value);
+      const { error: upErr } = await sb.from('config_reserves').update({ xbet, waafi, updated_by: state.agent ? state.agent.email : 'createur' }).eq('id', 1);
+      if (upErr) toast(upErr.message, 'error'); else toast('Réserves mises à jour', 'success');
+    });
+  });
+}
+
+/* --- Agents --- */
+function renderAdminAgents(main){
+  main.innerHTML = `
+    <form class="card form-inline" id="agent-form" style="margin-bottom:20px;">
+      <div class="field"><label>Nom</label><input type="text" id="a-name" required></div>
+      <div class="field"><label>Email</label><input type="email" id="a-email" required></div>
+      <div class="field"><label>Mot de passe</label><input type="password" id="a-password" required minlength="8"></div>
+      <div class="field">
+        <label>Rôle</label>
+        <select id="a-role">
+          <option value="admin">Admin</option>
+          <option value="agent_paiement">Agent Paiement</option>
+          <option value="support">Support</option>
+          <option value="observateur">Observateur</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" type="submit">Ajouter</button>
+    </form>
+    <div class="card" style="padding:0;overflow-x:auto;">
+      <table class="data-table"><thead><tr><th>Nom</th><th>Email</th><th>Rôle</th><th>Créé</th></tr></thead><tbody id="agents-tbody"><tr><td colspan="4">Chargement…</td></tr></tbody></table>
+    </div>
+  `;
+  async function loadAgents(){
+    const { data, error } = await sb.from('agents').select('*').order('created_at', { ascending:false });
+    const tbody = document.getElementById('agents-tbody');
+    if (error){ tbody.innerHTML = `<tr><td colspan="4">Erreur</td></tr>`; return; }
+    tbody.innerHTML = (data||[]).map(a => `<tr><td>${a.name}</td><td>${a.email}</td><td>${a.role}</td><td>${new Date(a.created_at).toLocaleDateString()}</td></tr>`).join('') || `<tr><td colspan="4"><div class="empty-state">Aucun agent</div></td></tr>`;
+  }
+  document.getElementById('agent-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await apiFetch('admin-create-agent', { method:'POST', body:{
+        name: document.getElementById('a-name').value.trim(),
+        email: document.getElementById('a-email').value.trim(),
+        password: document.getElementById('a-password').value,
+        role: document.getElementById('a-role').value,
+      }});
+      toast('Agent créé', 'success');
+      e.target.reset();
+      loadAgents();
+    } catch (err) { toast(err.message, 'error'); }
+  });
+  loadAgents();
+}
+
+/* --- Notifications --- */
+function renderAdminNotifications(main){
+  main.innerHTML = `<div class="card" style="padding:0;overflow-x:auto;">
+    <table class="data-table"><thead><tr><th>Type</th><th>Message</th><th>Transfer ID</th><th>Montant</th><th>Ordre</th><th>Date</th></tr></thead><tbody id="notif-tbody"><tr><td colspan="6">Chargement…</td></tr></tbody></table>
+  </div>`;
+  sb.from('waafi_notifications').select('*').order('created_at', { ascending:false }).limit(100).then(({ data, error }) => {
+    const tbody = document.getElementById('notif-tbody');
+    if (error){ tbody.innerHTML = `<tr><td colspan="6">Erreur</td></tr>`; return; }
+    tbody.innerHTML = (data||[]).map(n => `<tr><td>${n.type}</td><td>${n.message||''}</td><td class="mono">${n.transfer_id||''}</td><td class="mono">${n.montant||''}</td><td class="mono">${n.order_id||''}</td><td>${new Date(n.created_at).toLocaleString()}</td></tr>`).join('') || `<tr><td colspan="6"><div class="empty-state">Aucune notification</div></td></tr>`;
+  });
+}
+
+/* --- Test Payment --- */
+function renderAdminTestPay(main){
+  main.innerHTML = `
+    <div class="card" style="max-width:480px;">
+      <div class="field"><label>User ID 1xBet</label><input type="text" id="tp-userid"></div>
+      <div class="field"><label>Montant</label><input type="number" id="tp-amount" class="mono-input"></div>
+      <div class="field"><label>Opération</label>
+        <select id="tp-op"><option value="deposit">Deposit</option><option value="payout">Payout</option></select>
+      </div>
+      <button class="btn btn-primary btn-block" id="tp-submit">Tester</button>
+      <pre id="tp-result" class="mono" style="margin-top:14px;white-space:pre-wrap;font-size:.78rem;color:var(--text-dim);"></pre>
+    </div>
+  `;
+  document.getElementById('tp-submit').addEventListener('click', async () => {
+    const resultEl = document.getElementById('tp-result');
+    resultEl.textContent = 'Envoi…';
+    try {
+      const res = await apiFetch('admin-test-payment', { method:'POST', body:{
+        userId: document.getElementById('tp-userid').value.trim(),
+        amount: Number(document.getElementById('tp-amount').value),
+        operation: document.getElementById('tp-op').value,
+      }});
+      resultEl.textContent = JSON.stringify(res, null, 2);
+    } catch (err) { resultEl.textContent = 'Erreur: ' + err.message; }
+  });
+}
+
+/* ------------------------------ BOOT ------------------------------ */
+async function boot(){
+  checkCreatorBypass();
+  document.documentElement.lang = currentLang;
+  await refreshAuthState();
+  route();
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
+}
+boot();
+</script>
+</body>
+</html>

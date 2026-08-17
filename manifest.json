@@ -1,0 +1,26 @@
+{
+  "name": "Simba — Dépôt & Retrait 1xBet via Waafi",
+  "short_name": "Simba",
+  "description": "Échange rapide et sécurisé entre Waafi et 1xBet : dépôt et retrait en quelques minutes.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#060B14",
+  "theme_color": "#060B14",
+  "orientation": "portrait-primary",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%232F8FFF'/%3E%3Ctext x='96' y='132' font-size='104' font-family='Arial' font-weight='800' text-anchor='middle' fill='white'%3ES%3C/text%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='108' fill='%232F8FFF'/%3E%3Ctext x='256' y='352' font-size='280' font-family='Arial' font-weight='800' text-anchor='middle' fill='white'%3ES%3C/text%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
