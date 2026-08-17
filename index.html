@@ -132,10 +132,20 @@ header.site{
 .hero p.sub{color:var(--text-dim); font-size:1.05rem; margin-bottom:22px;}
 .promo-row{display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap; margin-bottom:26px;}
 .promo-code{
-  display:flex; align-items:center; gap:10px; background:var(--card-bg); border:1px dashed var(--primary);
-  border-radius:var(--radius-s); padding:10px 16px; font-family:var(--font-mono); font-weight:700; color:var(--primary-2);
+  display:flex; align-items:center; gap:8px; background:var(--card-bg); border:1px solid var(--card-border);
+  border-radius:999px; padding:6px 6px 6px 16px; box-shadow:var(--shadow);
 }
-.promo-code button{background:none; border:none; color:var(--text-dim); font-size:1rem;}
+.promo-code .promo-label{font-size:.82rem; color:var(--text-dim); font-weight:500; white-space:nowrap;}
+.promo-code .promo-value{
+  font-family:var(--font-mono); font-weight:700; color:#fff; background:linear-gradient(135deg,var(--primary),#63A9FF);
+  padding:6px 14px; border-radius:999px; font-size:.85rem; letter-spacing:.02em; box-shadow:0 4px 14px -4px rgba(47,143,255,.55);
+}
+.promo-code button{
+  background:none; border:none; color:var(--text-dim); width:32px; height:32px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center; transition:color .15s ease, background .15s ease;
+}
+.promo-code button:hover{color:var(--primary); background:rgba(47,143,255,.1);}
+.promo-code button svg{vertical-align:middle !important;}
 
 /* ============================= ACTION CARD (depot/retrait) ============================= */
 .action-card{max-width:640px; margin:0 auto; padding:22px;}
@@ -149,9 +159,9 @@ header.site{
 .action-tile.tile-depot{border-color:rgba(34,197,94,.5);}
 .action-tile.tile-retrait{border-color:rgba(47,143,255,.5);}
 .action-tile:hover{transform:translateY(-3px); box-shadow:0 16px 34px -18px rgba(0,0,0,.5);}
-.tile-icon{width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.3rem;}
-.tile-depot .tile-icon{background:rgba(34,197,94,.16); color:var(--success);}
-.tile-retrait .tile-icon{background:rgba(47,143,255,.16); color:var(--primary);}
+.tile-icon{width:46px; height:46px; border-radius:13px; display:flex; align-items:center; justify-content:center; box-shadow:inset 0 1px 0 rgba(255,255,255,.08);}
+.tile-depot .tile-icon{background:linear-gradient(135deg,rgba(34,197,94,.22),rgba(34,197,94,.08)); color:var(--success);}
+.tile-retrait .tile-icon{background:linear-gradient(135deg,rgba(47,143,255,.22),rgba(47,143,255,.08)); color:var(--primary);}
 .tile-title{font-family:var(--font-title); font-weight:700; font-size:1.05rem;}
 .tile-desc{font-size:.82rem; color:var(--text-dim);}
 
@@ -206,6 +216,10 @@ footer.site{border-top:1px solid var(--card-border); padding:28px 0; text-align:
 .timeline li.done .t-dot{border-color:var(--success); background:var(--success); color:#06210F;}
 .timeline li.active .t-dot{border-color:var(--primary); box-shadow:0 0 0 4px rgba(47,143,255,.2);}
 .timeline li.failed .t-dot{border-color:var(--danger); background:var(--danger); color:#fff;}
+.t-dot-pulse{width:8px; height:8px; border-radius:50%; background:var(--primary);}
+@media (prefers-reduced-motion:no-preference){
+  .t-dot-pulse{animation:pulse-dot 1.4s ease-in-out infinite;}
+}
 .t-title{font-weight:700; font-size:.92rem;}
 .t-sub{font-size:.78rem; color:var(--text-dim);}
 
@@ -304,7 +318,7 @@ const KP_LANGS = {
     'hero.eyebrow':'Échange Waafi ⇄ 1xBet',
     'hero.title1':'Rechargez votre compte', 'hero.title2':'1xBet en 2 minutes',
     'hero.sub':'Dépôt et retrait instantanés entre Waafi et 1xBet. Simple, rapide, sécurisé.',
-    'hero.promo':'Code promo 1xBet :',
+    'hero.promo':'Code promo 1xBet',
     'hero.cta':'Créer mon compte 1xBet',
     'tile.depot.title':'Dépôt', 'tile.depot.desc':'Waafi → 1xBet : rechargez votre compte de jeu',
     'tile.retrait.title':'Retrait', 'tile.retrait.desc':'1xBet → Waafi : retirez vos gains',
@@ -339,7 +353,7 @@ const KP_LANGS = {
     'hero.eyebrow':'Waafi ⇄ 1xBet exchange',
     'hero.title1':'Top up your', 'hero.title2':'1xBet account in 2 minutes',
     'hero.sub':'Instant deposits and withdrawals between Waafi and 1xBet. Simple, fast, secure.',
-    'hero.promo':'1xBet promo code:',
+    'hero.promo':'1xBet promo code',
     'hero.cta':'Create my 1xBet account',
     'tile.depot.title':'Deposit', 'tile.depot.desc':'Waafi → 1xBet: top up your betting account',
     'tile.retrait.title':'Withdraw', 'tile.retrait.desc':'1xBet → Waafi: withdraw your winnings',
@@ -396,6 +410,37 @@ function toast(message, type){
   el.textContent = message;
   root.appendChild(el);
   setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(() => el.remove(), 300); }, 4200);
+}
+
+/* ------------------------------ ICONS ------------------------------ */
+const ICONS = {
+  bolt: '<path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/>',
+  copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  arrowDown: '<line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/>',
+  arrowUp: '<line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>',
+  arrowLeft: '<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>',
+  arrowRight: '<line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>',
+  message: '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>',
+  send: '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+  sun: '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>',
+  moon: '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
+  check: '<polyline points="20 6 9 17 4 12"/>',
+  x: '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+  alert: '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+  login: '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>',
+  logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>',
+  barChart: '<line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/>',
+  fileText: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>',
+  wallet: '<rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>',
+  users: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  bell: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
+  flask: '<path d="M9 2v6l-6 10a2 2 0 0 0 1.8 3h14.4a2 2 0 0 0 1.8-3l-6-10V2"/><line x1="7" y1="14" x2="17" y2="14"/><line x1="9" y1="2" x2="15" y2="2"/>',
+};
+function icon(name, size){
+  size = size || 18;
+  const body = ICONS[name] || '';
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${name === 'bolt' ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px;flex:0 0 auto">${body}</svg>`;
 }
 
 /* ------------------------------ SUPABASE ----------------------------- */
@@ -475,7 +520,7 @@ function headerHtml(showBack, backHash){
   <header class="site">
     <div class="header-inner">
       ${showBack ? `
-        <a class="back-btn" href="${backHash || '#/'}" aria-label="${t('back')}">←</a>
+        <a class="back-btn" href="${backHash || '#/'}" aria-label="${t('back')}">${icon('arrowLeft', 18)}</a>
       ` : `
         <a href="#/" class="logo" style="text-decoration:none;">
           <span class="logo-mark">S</span>
@@ -484,7 +529,7 @@ function headerHtml(showBack, backHash){
       `}
       <div class="header-actions">
         <button class="icon-btn" id="btn-lang" title="FR/EN">${currentLang.toUpperCase()}</button>
-        <button class="icon-btn" id="btn-theme" title="Theme">${document.documentElement.getAttribute('data-theme')==='dark' ? '☀️' : '🌙'}</button>
+        <button class="icon-btn" id="btn-theme" title="Theme">${document.documentElement.getAttribute('data-theme')==='dark' ? icon('sun', 17) : icon('moon', 17)}</button>
         <span class="status-pill"><span class="status-dot"></span> Connecté</span>
       </div>
     </div>
@@ -508,25 +553,26 @@ function renderHome(app){
     <section class="hero">
       <div class="hero-bg"><div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div></div>
       <div class="container hero-content">
-        <span class="eyebrow">⚡ ${t('hero.eyebrow')}</span>
+        <span class="eyebrow">${icon('bolt', 13)} ${t('hero.eyebrow')}</span>
         <h1>${t('hero.title1')} <span>${t('hero.title2')}</span></h1>
         <p class="sub">${t('hero.sub')}</p>
         <div class="promo-row">
           <div class="promo-code">
-            <span>${t('hero.promo')} ${CONFIG.PROMO_CODE}</span>
-            <button id="copy-promo" title="Copier">📋</button>
+            <span class="promo-label">${t('hero.promo')}</span>
+            <span class="promo-value">${CONFIG.PROMO_CODE}</span>
+            <button id="copy-promo" title="Copier">${icon('copy', 16)}</button>
           </div>
           <a class="btn btn-primary" href="${CONFIG.AFFILIATE_LINK}" target="_blank" rel="noopener">${t('hero.cta')}</a>
         </div>
         <div class="card action-card">
           <div class="action-grid">
             <a href="#depot" class="action-tile tile-depot">
-              <div class="tile-icon">⬇️</div>
+              <div class="tile-icon">${icon('arrowDown', 22)}</div>
               <div class="tile-title">${t('tile.depot.title')}</div>
               <div class="tile-desc">${t('tile.depot.desc')}</div>
             </a>
             <a href="#retrait" class="action-tile tile-retrait">
-              <div class="tile-icon">⬆️</div>
+              <div class="tile-icon">${icon('arrowUp', 22)}</div>
               <div class="tile-title">${t('tile.retrait.title')}</div>
               <div class="tile-desc">${t('tile.retrait.desc')}</div>
             </a>
@@ -549,9 +595,9 @@ function renderHome(app){
         <p>${t('support.sub')}</p>
       </div>
       <div class="support-row">
-        <a class="btn btn-outline" href="${CONFIG.WHATSAPP_SUPPORT_URL}" target="_blank" rel="noopener">💬 WhatsApp</a>
-        <a class="btn btn-outline" href="${CONFIG.TELEGRAM_SUPPORT_URL}" target="_blank" rel="noopener">✈️ Telegram</a>
-        <button class="btn btn-outline" id="btn-install">📲 ${t('nav.install')}</button>
+        <a class="btn btn-outline" href="${CONFIG.WHATSAPP_SUPPORT_URL}" target="_blank" rel="noopener">${icon('message', 16)} WhatsApp</a>
+        <a class="btn btn-outline" href="${CONFIG.TELEGRAM_SUPPORT_URL}" target="_blank" rel="noopener">${icon('send', 16)} Telegram</a>
+        <button class="btn btn-outline" id="btn-install">${icon('download', 16)} ${t('nav.install')}</button>
       </div>
     </section>
 
@@ -784,10 +830,10 @@ function timelineHtml(status){
     } else {
       if (i < 1) cls = 'done';
     }
-    const icon = cls === 'done' ? '✓' : (cls === 'active' ? '●' : '');
-    return `<li class="${cls}"><div class="t-dot">${icon}</div><div><div class="t-title">${s.label}</div></div></li>`;
+    const dotIcon = cls === 'done' ? icon('check', 14) : (cls === 'active' ? '<span class="t-dot-pulse"></span>' : '');
+    return `<li class="${cls}"><div class="t-dot">${dotIcon}</div><div><div class="t-title">${s.label}</div></div></li>`;
   }).join('') + (failed ? `
-    <li class="failed"><div class="t-dot">✕</div><div><div class="t-title">${t('suivi.status.' + status)}</div></div></li>
+    <li class="failed"><div class="t-dot">${icon('x', 14)}</div><div><div class="t-title">${t('suivi.status.' + status)}</div></div></li>
   ` : '') + `</ul>`;
 }
 
@@ -844,8 +890,8 @@ function renderLogin(app){
           <button type="submit" class="btn btn-primary btn-block" id="l-submit">${t('login.submit')}</button>
         </form>
         <div class="divider">OR</div>
-        <button class="btn btn-outline btn-block" id="btn-google">🔍 ${t('login.google')}</button>
-        ${state.isCreatorBypass ? `<button class="btn btn-success btn-block" id="btn-creator-continue" style="margin-top:10px;">→ Admin</button>` : ''}
+        <button class="btn btn-outline btn-block" id="btn-google">${icon('login', 16)} ${t('login.google')}</button>
+        ${state.isCreatorBypass ? `<button class="btn btn-success btn-block" id="btn-creator-continue" style="margin-top:10px;">Admin ${icon('arrowRight', 16)}</button>` : ''}
       </div>
     </div>
   `;
@@ -901,12 +947,12 @@ sb.auth.onAuthStateChange(async (_event, session) => {
 
 /* ------------------------------ ADMIN PANEL ------------------------------ */
 const ADMIN_TABS = [
-  { key:'dashboard', icon:'📊', roles:['createur','admin','agent_paiement','support','observateur'] },
-  { key:'orders', icon:'🧾', roles:['createur','admin','agent_paiement','support','observateur'] },
-  { key:'reserves', icon:'💰', roles:['createur','admin'] },
-  { key:'agents', icon:'👥', roles:['createur','admin'] },
-  { key:'notifications', icon:'🔔', roles:['createur','admin','support'] },
-  { key:'testpay', icon:'🧪', roles:['createur','admin'] },
+  { key:'dashboard', icon:'barChart', roles:['createur','admin','agent_paiement','support','observateur'] },
+  { key:'orders', icon:'fileText', roles:['createur','admin','agent_paiement','support','observateur'] },
+  { key:'reserves', icon:'wallet', roles:['createur','admin'] },
+  { key:'agents', icon:'users', roles:['createur','admin'] },
+  { key:'notifications', icon:'bell', roles:['createur','admin','support'] },
+  { key:'testpay', icon:'flask', roles:['createur','admin'] },
 ];
 
 function renderAdmin(app){
@@ -919,10 +965,10 @@ function renderAdmin(app){
       <aside class="admin-side">
         ${visibleTabs.map(tabDef => `
           <button class="admin-nav-btn ${state.adminTab === tabDef.key ? 'active' : ''}" data-tab="${tabDef.key}">
-            ${tabDef.icon} ${t('admin.' + tabDef.key)}
+            ${icon(tabDef.icon, 16)} ${t('admin.' + tabDef.key)}
           </button>
         `).join('')}
-        <button class="admin-nav-btn" id="admin-logout">🚪 ${t('admin.logout')}</button>
+        <button class="admin-nav-btn" id="admin-logout">${icon('logout', 16)} ${t('admin.logout')}</button>
       </aside>
       <main class="admin-main" id="admin-main"></main>
     </div>
@@ -1033,9 +1079,9 @@ function renderAdminOrders(main){
         <td>${new Date(o.created_at).toLocaleString()}</td>
         <td class="row-actions">
           ${o.status === 'en_attente' || o.status === 'paiement_recu' ? `
-            <button class="btn btn-sm btn-success" data-act="confirmer" data-id="${o.id}" data-type="${o.type}">✓</button>
-            <button class="btn btn-sm btn-danger" data-act="rejeter" data-id="${o.id}" data-type="${o.type}">✕</button>
-            <button class="btn btn-sm btn-outline" data-act="fraude" data-id="${o.id}" data-type="${o.type}">⚠</button>
+            <button class="btn btn-sm btn-success" data-act="confirmer" data-id="${o.id}" data-type="${o.type}">${icon('check', 14)}</button>
+            <button class="btn btn-sm btn-danger" data-act="rejeter" data-id="${o.id}" data-type="${o.type}">${icon('x', 14)}</button>
+            <button class="btn btn-sm btn-outline" data-act="fraude" data-id="${o.id}" data-type="${o.type}">${icon('alert', 14)}</button>
           ` : ''}
         </td>
       </tr>
