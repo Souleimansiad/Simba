@@ -19,6 +19,7 @@ export default async function handler(req, res) {
     if (action === 'retry-deposit') return await handleRetryDeposit(req, res);
     if (action === 'test-payment') return await handleTestPayment(req, res);
     if (action === 'create-agent') return await handleCreateAgent(req, res);
+    if (action === 'mobcash-debug') return await handleMobcashDebug(req, res);
     return res.status(400).json({ error: 'Action inconnue' });
   } catch (err) {
     return res.status(err.statusCode || 500).json({ error: err.message });
@@ -239,4 +240,56 @@ async function handleCreateAgent(req, res) {
   });
 
   return res.status(200).json({ ok: true, id: created.user.id });
+}
+
+/* ----------------------- diagnostic MobCash (temporaire) ----------------------- */
+// Authentifié par ?token= (comme le bypass créateur) pour pouvoir être appelé
+// directement (GET) sans passer par l'UI du navigateur. Teste plusieurs
+// variantes du login (format cashboxCode, User-Agent) pour distinguer un
+// problème de format de requête d'un vrai problème d'identifiants/activation
+// côté MobCash. Ne renvoie jamais le mot de passe.
+async function handleMobcashDebug(req, res) {
+  const token = req.query.token;
+  if (!process.env.ADMIN_URL_TOKEN || token !== process.env.ADMIN_URL_TOKEN) {
+    return res.status(401).json({ error: 'unauthorized' });
+  }
+
+  const LOGIN_URL = 'https://admin.mob-cash.com/api/v2/cashbox/login';
+  const cashboxCode = (process.env.MOBCASH_CASHBOX_CODE || '').trim();
+  const login = (process.env.MOBCASH_LOGIN || '').trim();
+  const password = (process.env.MOBCASH_PASSWORD || '').trim();
+
+  async function attempt(label, body, extraHeaders) {
+    try {
+      const r = await fetch(LOGIN_URL, {
+        method: 'POST',
+        headers: Object.assign(
+          { Accept: 'application/json, text/plain, */*', 'Content-Type': 'application/json' },
+          extraHeaders || {}
+        ),
+        body: JSON.stringify(body),
+      });
+      const text = await r.text();
+      return { label, status: r.status, body: text.slice(0, 400) };
+    } catch (err) {
+      return { label, error: err.message };
+    }
+  }
+
+  const results = [];
+  results.push(await attempt('number-cashboxCode', { cashboxCode: Number(cashboxCode), login, password }));
+  results.push(await attempt('string-cashboxCode', { cashboxCode, login, password }));
+  results.push(await attempt('with-browser-ua', { cashboxCode: Number(cashboxCode), login, password }, {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+  }));
+
+  return res.status(200).json({
+    diagnostics: {
+      cashboxCode_length: cashboxCode.length,
+      login_value: login,
+      login_length: login.length,
+      password_length: password.length,
+    },
+    results,
+  });
 }
