@@ -1,8 +1,12 @@
 import { supabaseAdmin } from './supabase.js';
 
-const MOBCASH_CASHBOX_CODE = process.env.MOBCASH_CASHBOX_CODE;
-const MOBCASH_LOGIN = process.env.MOBCASH_LOGIN;
-const MOBCASH_PASSWORD = process.env.MOBCASH_PASSWORD;
+// .trim() défend contre un espace/retour à la ligne collé par erreur dans
+// les variables d'env Vercel (fréquent en copiant depuis WhatsApp/Telegram),
+// qui ferait échouer la comparaison exacte côté MobCash sans que rien ne le
+// laisse deviner ("invalid credentials" identique à une vraie erreur).
+const MOBCASH_CASHBOX_CODE = (process.env.MOBCASH_CASHBOX_CODE || '').trim();
+const MOBCASH_LOGIN = (process.env.MOBCASH_LOGIN || '').trim();
+const MOBCASH_PASSWORD = (process.env.MOBCASH_PASSWORD || '').trim();
 
 // API APP-to-APP MobCash (doc fournie par le fournisseur). URLs fixes, pas
 // de signature à calculer : authentification par login -> accessToken
