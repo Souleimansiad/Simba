@@ -260,6 +260,9 @@ async function handleMobcashDebug(req, res) {
   const password = (process.env.MOBCASH_PASSWORD || '').trim();
 
   async function attempt(label, body, extraHeaders) {
+    const started = Date.now();
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
     try {
       const r = await fetch(LOGIN_URL, {
         method: 'POST',
@@ -268,11 +271,14 @@ async function handleMobcashDebug(req, res) {
           extraHeaders || {}
         ),
         body: JSON.stringify(body),
+        signal: controller.signal,
       });
       const text = await r.text();
-      return { label, status: r.status, body: text.slice(0, 400) };
+      return { label, status: r.status, body: text.slice(0, 400), ms: Date.now() - started };
     } catch (err) {
-      return { label, error: err.message };
+      return { label, error: err.name === 'AbortError' ? 'timeout après 8s (pas de réponse)' : err.message, ms: Date.now() - started };
+    } finally {
+      clearTimeout(timer);
     }
   }
 
