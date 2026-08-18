@@ -89,9 +89,12 @@ async function mobcashLogin() {
       password: MOBCASH_PASSWORD,
     }),
   });
-  const data = await res.json().catch(() => ({}));
+  const rawText = await res.text();
+  let data = {};
+  try { data = JSON.parse(rawText); } catch { /* réponse non-JSON, gardée dans rawText */ }
   if (!res.ok || !data.accessToken) {
-    throw new Error(data.message || ('MobCash login HTTP ' + res.status));
+    const detail = data.message || rawText.slice(0, 300) || ('HTTP ' + res.status);
+    throw new Error(`MobCash login échoué (${res.status}) : ${detail}`);
   }
   return data; // { sessionID, userID, accessToken, expiresAt, cashbox }
 }
@@ -106,11 +109,15 @@ async function mobileRpc(path, accessToken, params) {
     },
     body: JSON.stringify({ id: 1, jsonrpc: '2.0', params }),
   });
-  const data = await res.json().catch(() => ({}));
+  const rawText = await res.text();
+  let data = {};
+  try { data = JSON.parse(rawText); } catch { /* réponse non-JSON, gardée dans rawText */ }
   const entry = Array.isArray(data) ? data[0] : data;
   if (!res.ok || !entry || entry.error) {
-    const msg = entry && entry.error ? (entry.error.message || JSON.stringify(entry.error)) : ('MobCash HTTP ' + res.status);
-    throw new Error(msg);
+    const msg = entry && entry.error
+      ? (entry.error.message || JSON.stringify(entry.error))
+      : (rawText.slice(0, 300) || ('MobCash HTTP ' + res.status));
+    throw new Error(`MobCash ${path} échoué (${res.status}) : ${msg}`);
   }
   return entry.result || {};
 }
