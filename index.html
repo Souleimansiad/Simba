@@ -1281,6 +1281,7 @@ function renderAdminTestPay(main){
       <div class="field"><label>Opération</label>
         <select id="tp-op"><option value="deposit">Deposit</option><option value="payout">Payout</option></select>
       </div>
+      <div class="field"><label>Code de retrait 1xBet (payout uniquement)</label><input type="text" id="tp-code" class="mono-input"></div>
       <button class="btn btn-primary btn-block" id="tp-submit">Tester</button>
       <pre id="tp-result" class="mono" style="margin-top:14px;white-space:pre-wrap;font-size:.78rem;color:var(--text-dim);"></pre>
     </div>
@@ -1293,6 +1294,7 @@ function renderAdminTestPay(main){
         userId: document.getElementById('tp-userid').value.trim(),
         amount: Number(document.getElementById('tp-amount').value),
         operation: document.getElementById('tp-op').value,
+        withdrawalCode: document.getElementById('tp-code').value.trim(),
       }});
       resultEl.textContent = JSON.stringify(res, null, 2);
     } catch (err) { resultEl.textContent = 'Erreur: ' + err.message; }

@@ -21,7 +21,7 @@ Plateforme d'échange Waafi ⇄ 1xBet : dépôt et retrait en quelques minutes.
 | `ADMIN_URL_TOKEN` | Doit être identique à la valeur codée en dur dans `index.html` (bypass créateur `?kp=TOKEN`) |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ADMIN_CHAT_ID`, `TELEGRAM_SUPPORT_BOT_TOKEN` | Bots Telegram (admin + support) |
 | `WHATSAPP_API_KEY`, `WHATSAPP_API_URL`, `WHATSAPP_AGENT_NUMBERS` | Notifications WhatsApp |
-| `MOBCASH_BASE_URL`, `MOBCASH_CASHIER_PASS`, `MOBCASH_CASHDESK_ID` | API MobCash (crédit/retrait 1xBet) |
+| `MOBCASH_CASHBOX_CODE`, `MOBCASH_LOGIN`, `MOBCASH_PASSWORD` | Identifiants API MobCash APP2APP (crédit/retrait 1xBet) — cashboxCode, login et mot de passe du caissier fournis par MobCash |
 | `SUPABASE_WEBHOOK_SECRET`, `SMS_WEBHOOK_SECRET`, `TELEGRAM_WEBHOOK_SECRET`, `CRON_SECRET` | Secrets optionnels de vérification des webhooks |
 
 3. Configurer les **Database Webhooks** Supabase vers `/api/hooks/depot-created`, `/api/hooks/depot-updated`, `/api/hooks/retrait-created`, `/api/hooks/retrait-updated`.
@@ -31,11 +31,21 @@ Sans ces variables, le site fonctionne déjà (dépôt/retrait/suivi), seules le
 
 ## Mode manuel (en attendant l'accès à l'API MobCash)
 
-Tant que `MOBCASH_BASE_URL` / `MOBCASH_CASHIER_PASS` / `MOBCASH_CASHDESK_ID` ne sont pas configurées sur Vercel, le crédit/paiement 1xBet se fait **manuellement** :
+Tant que `MOBCASH_CASHBOX_CODE` / `MOBCASH_LOGIN` / `MOBCASH_PASSWORD` ne sont pas configurées sur Vercel, le crédit/paiement 1xBet se fait **manuellement** :
 
 1. Le SMS Waafi arrive via MacroDroid → `/api/sms-webhook` matche le Transfer ID et passe l'ordre en "Paiement reçu", puis envoie une alerte Telegram à l'admin avec le montant et l'ID 1xBet à créditer.
 2. L'agent recharge/paye manuellement le compte 1xBet, puis clique **Confirmer** dans le panneau admin (Ordres) — l'ordre passe directement à "Crédité avec succès" sans appel MobCash.
 3. Dès que les 3 variables MobCash sont renseignées, le code bascule automatiquement en mode automatique (crédit via l'API MobCash) — aucune modification de code nécessaire.
+
+## API MobCash (mode automatique)
+
+Intégration "APP2APP" (doc fournie par MobCash) :
+
+- Connexion : `POST https://admin.mob-cash.com/api/v2/cashbox/login` avec `{cashboxCode, login, password}` → `accessToken` (Bearer), `sessionID`, `userID`.
+- Dépôt (2 étapes) : `POST /api/v1/mobile/payerNickname` (vérification du compte 1xBet) puis `POST /api/v1/mobile/deposit`.
+- Retrait (2 étapes) : `POST /api/v1/mobile/getWithdrawalAmount` (récupère le montant validé par 1xBet pour le `code_retrait_1x` fourni par le client) puis `POST /api/v1/mobile/withdrawal`.
+- Chaque opération refait un login (pas de cache de token entre invocations serverless) — volume faible, donc pas de complexité de rafraîchissement de token.
+- Voir `api/_lib/mobcash.js`.
 
 ## Limites du plan Vercel Hobby
 

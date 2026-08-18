@@ -1,9 +1,14 @@
-import crypto from 'node:crypto';
 import { supabaseAdmin } from './supabase.js';
 
-const MOBCASH_BASE_URL = process.env.MOBCASH_BASE_URL;
-const MOBCASH_CASHIER_PASS = process.env.MOBCASH_CASHIER_PASS;
-const MOBCASH_CASHDESK_ID = process.env.MOBCASH_CASHDESK_ID;
+const MOBCASH_CASHBOX_CODE = process.env.MOBCASH_CASHBOX_CODE;
+const MOBCASH_LOGIN = process.env.MOBCASH_LOGIN;
+const MOBCASH_PASSWORD = process.env.MOBCASH_PASSWORD;
+
+// API APP-to-APP MobCash (doc fournie par le fournisseur). URLs fixes, pas
+// de signature à calculer : authentification par login -> accessToken
+// (Bearer), puis appels JSON-RPC avec sessionID/userID.
+const LOGIN_URL = 'https://admin.mob-cash.com/api/v2/cashbox/login';
+const MOBILE_BASE_URL = 'https://admin.mob-cash.com/api/v1/mobile';
 
 const SERVICE_NAME = 'mobcash';
 const FAILURE_THRESHOLD = 5;
@@ -14,11 +19,7 @@ const OPEN_DURATION_MS = 5 * 60 * 1000;
 // sont renseignées sur Vercel, le crédit redevient automatique sans
 // changement de code.
 export function isMobcashConfigured() {
-  return !!(MOBCASH_BASE_URL && MOBCASH_CASHIER_PASS && MOBCASH_CASHDESK_ID);
-}
-
-function signature(summa) {
-  return crypto.createHash('md5').update(String(summa) + MOBCASH_CASHIER_PASS + MOBCASH_CASHDESK_ID).digest('hex');
+  return !!(MOBCASH_CASHBOX_CODE && MOBCASH_LOGIN && MOBCASH_PASSWORD);
 }
 
 export async function getCircuitState() {
@@ -63,38 +64,94 @@ async function ensureCircuitAllows() {
   return cb.state;
 }
 
-async function callMobCash(path, body) {
+async function callMobCash(fn) {
   await ensureCircuitAllows();
   try {
-    const res = await fetch(MOBCASH_BASE_URL + path, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.message || ('MobCash HTTP ' + res.status));
+    const result = await fn();
     await recordSuccess();
-    return data;
+    return result;
   } catch (err) {
     await recordFailure();
     throw err;
   }
 }
 
-export async function mobcashDeposit(userId1xbet, montant) {
-  const summa = montant;
-  return callMobCash(`/Deposit/${userId1xbet}/Add`, {
-    summa,
-    cashdeskId: MOBCASH_CASHDESK_ID,
-    sign: signature(summa),
+// Chaque opération refait un login : volume faible, et ça évite toute la
+// complexité de cache/rafraîchissement de token entre invocations
+// serverless (chaque appel est indépendant).
+async function mobcashLogin() {
+  const res = await fetch(LOGIN_URL, {
+    method: 'POST',
+    headers: { Accept: 'application/json, text/plain, */*', 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      cashboxCode: Number(MOBCASH_CASHBOX_CODE),
+      login: MOBCASH_LOGIN,
+      password: MOBCASH_PASSWORD,
+    }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.accessToken) {
+    throw new Error(data.message || ('MobCash login HTTP ' + res.status));
+  }
+  return data; // { sessionID, userID, accessToken, expiresAt, cashbox }
+}
+
+async function mobileRpc(path, accessToken, params) {
+  const res = await fetch(MOBILE_BASE_URL + path, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json, text/plain, */*',
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + accessToken,
+    },
+    body: JSON.stringify({ id: 1, jsonrpc: '2.0', params }),
+  });
+  const data = await res.json().catch(() => ({}));
+  const entry = Array.isArray(data) ? data[0] : data;
+  if (!res.ok || !entry || entry.error) {
+    const msg = entry && entry.error ? (entry.error.message || JSON.stringify(entry.error)) : ('MobCash HTTP ' + res.status);
+    throw new Error(msg);
+  }
+  return entry.result || {};
+}
+
+export async function mobcashDeposit(payerID, montant) {
+  return callMobCash(async () => {
+    const { sessionID, userID, accessToken } = await mobcashLogin();
+    // Vérification du compte obligatoire avant dépôt.
+    await mobileRpc('/payerNickname', accessToken, { payerID, sessionID, userID });
+    const result = await mobileRpc('/deposit', accessToken, {
+      deposit: { amount: String(montant), payerID },
+      sessionID,
+      userID,
+    });
+    if (!result.success) throw new Error('Dépôt MobCash refusé');
+    return result;
   });
 }
 
-export async function mobcashPayout(userId1xbet, montant) {
-  const summa = montant;
-  return callMobCash(`/Deposit/${userId1xbet}/Payout`, {
-    summa,
-    cashdeskId: MOBCASH_CASHDESK_ID,
-    sign: signature(summa),
+export async function mobcashPayout(payerID, withdrawalCode, montant) {
+  return callMobCash(async () => {
+    const { sessionID, userID, accessToken } = await mobcashLogin();
+    // Demande d'ordre : récupère le montant validé côté 1xBet pour ce code.
+    const amountResult = await mobileRpc('/getWithdrawalAmount', accessToken, {
+      sessionID,
+      userID,
+      withdraw: { payerID, withdrawalCode },
+    });
+    const validatedAmount = Number(amountResult.amount);
+    if (!validatedAmount || validatedAmount <= 0) {
+      throw new Error('Code de retrait invalide ou expiré');
+    }
+    if (montant != null && Math.abs(validatedAmount - Number(montant)) > 0.01) {
+      throw new Error(`Montant du retrait MobCash (${validatedAmount}) différent du montant de l'ordre (${montant})`);
+    }
+    const result = await mobileRpc('/withdrawal', accessToken, {
+      sessionID,
+      userID,
+      withdraw: { amount: validatedAmount, payerID, withdrawalCode },
+    });
+    if (!result.success) throw new Error('Retrait MobCash refusé');
+    return { ...result, amount: validatedAmount };
   });
 }

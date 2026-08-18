@@ -140,7 +140,7 @@ async function handleActionOrdre(req, res) {
     } else {
       try {
         if (type === 'depot') await mobcashDeposit(order.id_bet1x, order.montant);
-        else await mobcashPayout(order.id_bet1x, order.montant);
+        else await mobcashPayout(order.id_bet1x, order.code_retrait_1x, order.montant);
         await supabaseAdmin.from(table).update({ status: 'credite' }).eq('id', order_id);
       } catch (mcErr) {
         await supabaseAdmin.from('alertes_etat').insert({ type: 'mobcash_credit_failed', order_id, collection: table });
@@ -191,17 +191,20 @@ async function handleTestPayment(req, res) {
   const caller = await resolveCaller(req);
   requireRole(caller, ['createur', 'admin']);
 
-  const { userId, amount, operation } = req.body || {};
+  const { userId, amount, operation, withdrawalCode } = req.body || {};
   if (!userId || !amount || !['deposit', 'payout'].includes(operation)) {
     return res.status(400).json({ error: 'Paramètres invalides' });
   }
+  if (operation === 'payout' && !withdrawalCode) {
+    return res.status(400).json({ error: 'withdrawalCode requis pour un test payout' });
+  }
   if (!isMobcashConfigured()) {
-    return res.status(400).json({ error: 'MobCash non configuré (MOBCASH_BASE_URL / MOBCASH_CASHIER_PASS / MOBCASH_CASHDESK_ID manquants sur Vercel).' });
+    return res.status(400).json({ error: 'MobCash non configuré (MOBCASH_CASHBOX_CODE / MOBCASH_LOGIN / MOBCASH_PASSWORD manquants sur Vercel).' });
   }
 
   const result = operation === 'deposit'
     ? await mobcashDeposit(userId, amount)
-    : await mobcashPayout(userId, amount);
+    : await mobcashPayout(userId, withdrawalCode, amount);
 
   return res.status(200).json({ ok: true, operation, result });
 }
