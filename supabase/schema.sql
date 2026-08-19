@@ -326,6 +326,65 @@ revoke all on function public.get_order_status(text, text) from public;
 grant execute on function public.get_order_status(text, text) to anon, authenticated;
 
 -- =====================================================================
+-- 6bis. CRÉATION PUBLIQUE SÉCURISÉE — create_depot_order() / create_retrait_order()
+-- La policy RLS d'INSERT public autorise l'écriture, mais anon n'a aucune
+-- policy SELECT sur ces tables : un INSERT ... RETURNING (ce que fait
+-- .insert().select() côté client) échoue et annule toute la transaction,
+-- car PostgREST doit relire la ligne insérée. Ces fonctions SECURITY
+-- DEFINER insèrent et renvoient uniquement l'id généré.
+-- =====================================================================
+
+create or replace function public.create_depot_order(
+  p_montant numeric,
+  p_id_bet1x text,
+  p_numero_waafi_expediteur text,
+  p_transfer_id text default null,
+  p_whatsapp text default null,
+  p_lang text default 'fr'
+) returns text
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  v_id text;
+begin
+  insert into public.depot_orders (montant, id_bet1x, numero_waafi_expediteur, transfer_id, whatsapp, lang)
+  values (p_montant, p_id_bet1x, p_numero_waafi_expediteur, p_transfer_id, p_whatsapp, coalesce(p_lang, 'fr'))
+  returning id into v_id;
+  return v_id;
+end;
+$$;
+
+revoke all on function public.create_depot_order(numeric, text, text, text, text, text) from public;
+grant execute on function public.create_depot_order(numeric, text, text, text, text, text) to anon, authenticated;
+
+create or replace function public.create_retrait_order(
+  p_montant numeric,
+  p_id_bet1x text,
+  p_numero_waafi_reception text,
+  p_code_retrait_1x text,
+  p_whatsapp text default null,
+  p_lang text default 'fr'
+) returns text
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  v_id text;
+begin
+  insert into public.retrait_orders (montant, id_bet1x, numero_waafi_reception, code_retrait_1x, whatsapp, lang)
+  values (p_montant, p_id_bet1x, p_numero_waafi_reception, p_code_retrait_1x, p_whatsapp, coalesce(p_lang, 'fr'))
+  returning id into v_id;
+  return v_id;
+end;
+$$;
+
+revoke all on function public.create_retrait_order(numeric, text, text, text, text, text) from public;
+grant execute on function public.create_retrait_order(numeric, text, text, text, text, text) to anon, authenticated;
+
+-- =====================================================================
 -- 7. REALTIME
 -- =====================================================================
 

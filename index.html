@@ -772,13 +772,13 @@ function renderDepot(app){
     const btn = document.getElementById('d-submit');
     btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
     try {
-      const { data, error } = await sb.from('depot_orders').insert({
-        montant: amount, id_bet1x: betId, numero_waafi_expediteur: sender,
-        transfer_id: transferId || null, whatsapp: whatsapp || null,
-        lang: currentLang,
-      }).select('id').single();
+      const { data, error } = await sb.rpc('create_depot_order', {
+        p_montant: amount, p_id_bet1x: betId, p_numero_waafi_expediteur: sender,
+        p_transfer_id: transferId || null, p_whatsapp: whatsapp || null,
+        p_lang: currentLang,
+      });
       if (error) throw error;
-      location.hash = '#suivi-' + data.id;
+      location.hash = '#suivi-' + data;
     } catch (err) {
       toast(err.message || 'Erreur', 'error');
       btn.disabled = false; btn.textContent = t('depot.submit');
@@ -847,13 +847,13 @@ function renderRetrait(app){
     const btn = document.getElementById('r-submit');
     btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
     try {
-      const { data, error } = await sb.from('retrait_orders').insert({
-        montant: amount, id_bet1x: betId, numero_waafi_reception: waafi,
-        code_retrait_1x: code, whatsapp: whatsapp || null,
-        lang: currentLang,
-      }).select('id').single();
+      const { data, error } = await sb.rpc('create_retrait_order', {
+        p_montant: amount, p_id_bet1x: betId, p_numero_waafi_reception: waafi,
+        p_code_retrait_1x: code, p_whatsapp: whatsapp || null,
+        p_lang: currentLang,
+      });
       if (error) throw error;
-      location.hash = '#suivi-' + data.id;
+      location.hash = '#suivi-' + data;
     } catch (err) {
       toast(err.message || 'Erreur', 'error');
       btn.disabled = false; btn.textContent = t('retrait.submit');
