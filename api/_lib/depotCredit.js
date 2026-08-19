@@ -1,6 +1,7 @@
 import { supabaseAdmin } from './supabase.js';
 import { mobcashDeposit, isMobcashConfigured } from './mobcash.js';
 import { sendTelegramAdmin } from './telegram.js';
+import { sendWhatsApp } from './whatsapp.js';
 
 // Marque l'ordre "paiement_recu" puis tente le crédit (automatique si
 // MobCash est configuré, sinon attente de confirmation manuelle dans le
@@ -27,6 +28,11 @@ export async function creditDepot(order, transferId) {
     `WhatsApp: ${order.whatsapp || '—'}\n\n` +
     (mobcashOn ? `⏳ MobCash va créditer le compte 1xBet...` : `⏳ Créditez manuellement puis confirmez sur le panneau admin...`)
   );
+  await sendWhatsApp(
+    order.whatsapp,
+    `💳 Simba — Paiement Waafi confirmé pour votre dépôt #${order.id} (${order.montant} DJF).\n` +
+    `Crédit en cours vers votre compte 1xBet...`
+  );
 
   if (!mobcashOn) {
     return { credited: false, manual: true };
@@ -36,6 +42,11 @@ export async function creditDepot(order, transferId) {
     await mobcashDeposit(order.id_bet1x, order.montant);
     await supabaseAdmin.from('depot_orders').update({ status: 'credite' }).eq('id', order.id);
     await sendTelegramAdmin(`✅ Dépôt — Crédité avec succès\n#${order.id} — ${order.montant} DJF`);
+    await sendWhatsApp(
+      order.whatsapp,
+      `✅ Simba — Dépôt #${order.id} crédité avec succès !\n` +
+      `${order.montant} DJF envoyés sur votre compte 1xBet ${order.id_bet1x}. Merci d'utiliser Simba 🦁`
+    );
     return { credited: true };
   } catch (mcErr) {
     await supabaseAdmin.from('alertes_etat').insert({ type: 'mobcash_credit_failed', order_id: order.id, collection: 'depot_orders' });

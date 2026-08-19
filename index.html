@@ -342,7 +342,7 @@ const KP_LANGS = {
     'depot.title':'Dépôt vers 1xBet', 'depot.waafi_number':'Numéro Waafi de réception', 'depot.waafi_name':'Nom du compte',
     'depot.amount':'Montant (DJF)', 'depot.bet_id':'ID 1xBet (compte à recharger)',
     'depot.sender_number':'Votre numéro Waafi (expéditeur)', 'depot.transfer_id':'Transfer ID Waafi (preuve de paiement)',
-    'depot.whatsapp':'WhatsApp (optionnel)', 'depot.submit':'Soumettre le dépôt',
+    'depot.whatsapp':'Numéro WhatsApp', 'depot.submit':'Soumettre le dépôt',
     'depot.steps.title':'Comment envoyer votre paiement Waafi',
     'depot.step1':'Ouvrez votre application Waafi (ou composez le code USSD de votre opérateur)',
     'depot.step2':'Choisissez « Envoyer de l\'argent » / Transfert',
@@ -355,7 +355,7 @@ const KP_LANGS = {
     'retrait.step3':'Entrez le montant et confirmez sur 1xBet', 'retrait.step4':'Copiez le code de retrait généré',
     'retrait.step5':'Remplissez le formulaire ci-dessous avec ce code',
     'retrait.bet_id':'ID 1xBet', 'retrait.amount':'Montant à retirer (DJF)', 'retrait.waafi_reception':'Numéro Waafi de réception',
-    'retrait.code':'Code retrait 1xBet', 'retrait.whatsapp':'WhatsApp (optionnel)', 'retrait.submit':'Soumettre le retrait',
+    'retrait.code':'Code retrait 1xBet', 'retrait.whatsapp':'Numéro WhatsApp', 'retrait.submit':'Soumettre le retrait',
     'form.required':'Ce champ est requis',
     'form.min_amount_depot':`Montant minimum : ${CONFIG.MIN_DEPOT_AMOUNT} DJF`,
     'form.min_amount_retrait':`Montant minimum : ${CONFIG.MIN_RETRAIT_AMOUNT} DJF`,
@@ -391,7 +391,7 @@ const KP_LANGS = {
     'depot.title':'Deposit to 1xBet', 'depot.waafi_number':'Receiving Waafi number', 'depot.waafi_name':'Account name',
     'depot.amount':'Amount (DJF)', 'depot.bet_id':'1xBet ID (account to top up)',
     'depot.sender_number':'Your Waafi number (sender)', 'depot.transfer_id':'Waafi Transfer ID (proof of payment)',
-    'depot.whatsapp':'WhatsApp (optional)', 'depot.submit':'Submit deposit',
+    'depot.whatsapp':'WhatsApp number', 'depot.submit':'Submit deposit',
     'depot.steps.title':'How to send your Waafi payment',
     'depot.step1':'Open your Waafi app (or dial your operator\'s USSD code)',
     'depot.step2':'Choose "Send money" / Transfer',
@@ -404,7 +404,7 @@ const KP_LANGS = {
     'retrait.step3':'Enter amount and confirm on 1xBet', 'retrait.step4':'Copy the generated withdrawal code',
     'retrait.step5':'Fill in the form below with that code',
     'retrait.bet_id':'1xBet ID', 'retrait.amount':'Amount to withdraw (DJF)', 'retrait.waafi_reception':'Receiving Waafi number',
-    'retrait.code':'1xBet withdrawal code', 'retrait.whatsapp':'WhatsApp (optional)', 'retrait.submit':'Submit withdrawal',
+    'retrait.code':'1xBet withdrawal code', 'retrait.whatsapp':'WhatsApp number', 'retrait.submit':'Submit withdrawal',
     'form.required':'This field is required',
     'form.min_amount_depot':`Minimum amount: ${CONFIG.MIN_DEPOT_AMOUNT} DJF`,
     'form.min_amount_retrait':`Minimum amount: ${CONFIG.MIN_RETRAIT_AMOUNT} DJF`,
@@ -756,7 +756,7 @@ function renderDepot(app){
         </div>
         <div class="field">
           <label for="d-whatsapp">${t('depot.whatsapp')}</label>
-          <input type="tel" id="d-whatsapp">
+          <input type="tel" id="d-whatsapp" required>
         </div>
         ${captchaHtml('captcha-depot')}
         <button type="submit" class="btn btn-primary btn-block" id="d-submit">${t('depot.submit')}</button>
@@ -778,7 +778,7 @@ function renderDepot(app){
     const whatsapp = document.getElementById('d-whatsapp').value.trim();
 
     if (!amount || amount < CONFIG.MIN_DEPOT_AMOUNT) return toast(t('form.min_amount_depot'), 'error');
-    if (!betId || !sender) return toast(t('form.required'), 'error');
+    if (!betId || !sender || !whatsapp) return toast(t('form.required'), 'error');
     if (!checkCaptcha()) return toast(t('form.captcha_wrong'), 'error');
 
     const btn = document.getElementById('d-submit');
@@ -834,7 +834,7 @@ function renderRetrait(app){
         </div>
         <div class="field">
           <label for="r-whatsapp">${t('retrait.whatsapp')}</label>
-          <input type="tel" id="r-whatsapp">
+          <input type="tel" id="r-whatsapp" required>
         </div>
         ${captchaHtml('captcha-retrait')}
         <button type="submit" class="btn btn-primary btn-block" id="r-submit">${t('retrait.submit')}</button>
@@ -853,7 +853,7 @@ function renderRetrait(app){
     const whatsapp = document.getElementById('r-whatsapp').value.trim();
 
     if (!amount || amount < CONFIG.MIN_RETRAIT_AMOUNT) return toast(t('form.min_amount_retrait'), 'error');
-    if (!betId || !waafi || !code) return toast(t('form.required'), 'error');
+    if (!betId || !waafi || !code || !whatsapp) return toast(t('form.required'), 'error');
     if (!checkCaptcha()) return toast(t('form.captcha_wrong'), 'error');
 
     const btn = document.getElementById('r-submit');

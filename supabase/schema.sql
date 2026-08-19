@@ -71,7 +71,7 @@ create table if not exists public.depot_orders (
   id_bet1x                  text not null check (char_length(id_bet1x) > 0),
   numero_waafi_expediteur   text not null check (char_length(numero_waafi_expediteur) > 0),
   transfer_id               text,
-  whatsapp                  text,
+  whatsapp                  text not null,
   turnstile_token           text,
   lang                      text not null default 'fr',
   fraud_score               int not null default 0,
@@ -80,6 +80,9 @@ create table if not exists public.depot_orders (
 );
 alter table public.depot_orders drop constraint if exists depot_orders_montant_check;
 alter table public.depot_orders add constraint depot_orders_montant_check check (montant >= 50);
+alter table public.depot_orders alter column whatsapp set not null;
+alter table public.depot_orders drop constraint if exists depot_orders_whatsapp_check;
+alter table public.depot_orders add constraint depot_orders_whatsapp_check check (char_length(whatsapp) > 0);
 
 create table if not exists public.retrait_orders (
   id                        text primary key default public.gen_order_ref('R'),
@@ -89,7 +92,7 @@ create table if not exists public.retrait_orders (
   id_bet1x                  text not null check (char_length(id_bet1x) > 0),
   numero_waafi_reception    text not null check (char_length(numero_waafi_reception) > 0),
   code_retrait_1x           text not null check (char_length(code_retrait_1x) > 0),
-  whatsapp                  text,
+  whatsapp                  text not null,
   turnstile_token           text,
   lang                      text not null default 'fr',
   fraud_score               int not null default 0,
@@ -98,6 +101,9 @@ create table if not exists public.retrait_orders (
 );
 alter table public.retrait_orders drop constraint if exists retrait_orders_montant_check;
 alter table public.retrait_orders add constraint retrait_orders_montant_check check (montant >= 250);
+alter table public.retrait_orders alter column whatsapp set not null;
+alter table public.retrait_orders drop constraint if exists retrait_orders_whatsapp_check;
+alter table public.retrait_orders add constraint retrait_orders_whatsapp_check check (char_length(whatsapp) > 0);
 
 create table if not exists public.waafi_notifications (
   id             bigserial primary key,

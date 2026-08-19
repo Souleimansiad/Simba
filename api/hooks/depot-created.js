@@ -1,7 +1,7 @@
 import { supabaseAdmin } from '../_lib/supabase.js';
 import { computeFraudScore } from '../_lib/fraud.js';
 import { sendTelegramAdmin } from '../_lib/telegram.js';
-import { notifyAgentsWhatsApp } from '../_lib/whatsapp.js';
+import { notifyAgentsWhatsApp, sendWhatsApp } from '../_lib/whatsapp.js';
 import { verifyDepotMatch } from '../_lib/waafiMatch.js';
 import { creditDepot, flagMismatch } from '../_lib/depotCredit.js';
 
@@ -54,6 +54,14 @@ export default async function handler(req, res) {
       );
     }
     await notifyAgentsWhatsApp(`Nouveau dépôt #${record.id} — ${record.montant} DJF${isFraud ? ' (FRAUDE SUSPECTÉE)' : ''}`);
+
+    if (!isFraud && record.whatsapp) {
+      await sendWhatsApp(
+        record.whatsapp,
+        `✅ Simba — Votre dépôt #${record.id} de ${record.montant} DJF est enregistré.\n` +
+        `Vérification du paiement Waafi en cours...`
+      );
+    }
 
     // Le client paie souvent AVANT de remplir le formulaire : le SMS Waafi
     // (relayé par MacroDroid) peut donc déjà être stocké au moment où cet
