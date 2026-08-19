@@ -150,7 +150,7 @@ export async function mobcashDeposit(payerID, montant) {
       sessionID,
       userID,
     });
-    if (!result.success) throw new Error('Dépôt MobCash refusé');
+    if (!result.success) throw new Error('Dépôt MobCash refusé : ' + JSON.stringify(result));
     return result;
   });
 }
@@ -176,7 +176,7 @@ export async function mobcashPayout(payerID, withdrawalCode, montant) {
       userID,
       withdraw: { amount: validatedAmount, payerID, withdrawalCode },
     });
-    if (!result.success) throw new Error('Retrait MobCash refusé');
+    if (!result.success) throw new Error('Retrait MobCash refusé : ' + JSON.stringify(result));
     return { ...result, amount: validatedAmount };
   });
 }
