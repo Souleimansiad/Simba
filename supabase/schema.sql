@@ -316,14 +316,22 @@ create policy alertes_etat_select_admin on public.alertes_etat
 -- reste de la table. C'est la seule voie de lecture publique des ordres.
 -- =====================================================================
 
+-- Renvoie aussi id_bet1x/waafi_number/reference/whatsapp : accepté sciemment
+-- malgré des IDs désormais séquentiels (D08191, D08192...) donc devinables
+-- — décision explicite du créateur de privilégier le détail affiché au
+-- client plutôt que l'anti-énumération stricte d'origine.
 create or replace function public.get_order_status(p_order_id text, p_type text)
 returns table (
-  id          text,
-  type        text,
-  status      text,
-  montant     numeric,
-  created_at  timestamptz,
-  updated_at  timestamptz
+  id           text,
+  type         text,
+  status       text,
+  montant      numeric,
+  id_bet1x     text,
+  waafi_number text,
+  reference    text,
+  whatsapp     text,
+  created_at   timestamptz,
+  updated_at   timestamptz
 )
 language plpgsql
 security definer
@@ -333,12 +341,16 @@ as $$
 begin
   if p_type = 'depot' then
     return query
-      select d.id, 'depot'::text, d.status, d.montant, d.created_at, d.updated_at
+      select d.id, 'depot'::text, d.status, d.montant, d.id_bet1x,
+             d.numero_waafi_expediteur, d.transfer_id, d.whatsapp,
+             d.created_at, d.updated_at
       from public.depot_orders d
       where d.id = p_order_id;
   elsif p_type = 'retrait' then
     return query
-      select r.id, 'retrait'::text, r.status, r.montant, r.created_at, r.updated_at
+      select r.id, 'retrait'::text, r.status, r.montant, r.id_bet1x,
+             r.numero_waafi_reception, r.code_retrait_1x, r.whatsapp,
+             r.created_at, r.updated_at
       from public.retrait_orders r
       where r.id = p_order_id;
   end if;
