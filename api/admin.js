@@ -2,6 +2,7 @@ import { supabaseAdmin } from './_lib/supabase.js';
 import { resolveCaller, requireRole } from './_lib/auth.js';
 import { mobcashDeposit, mobcashPayout, isMobcashConfigured } from './_lib/mobcash.js';
 import { sendTelegramAdmin } from './_lib/telegram.js';
+import { sendWhatsApp, isGreenApiConfigured } from './_lib/whatsapp.js';
 
 // Route admin consolidée : plusieurs actions peu fréquentes regroupées dans
 // un seul fichier pour rester sous la limite de fonctions serverless du plan
@@ -18,6 +19,7 @@ export default async function handler(req, res) {
     if (action === 'action-ordre') return await handleActionOrdre(req, res);
     if (action === 'retry-deposit') return await handleRetryDeposit(req, res);
     if (action === 'test-payment') return await handleTestPayment(req, res);
+    if (action === 'test-whatsapp') return await handleTestWhatsapp(req, res);
     if (action === 'create-agent') return await handleCreateAgent(req, res);
     return res.status(400).json({ error: 'Action inconnue' });
   } catch (err) {
@@ -102,7 +104,7 @@ async function handleStats(req, res) {
 async function handleActionOrdre(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Méthode non autorisée' });
   const caller = await resolveCaller(req);
-  const { order_id, type, action } = req.body || {};
+  const { order_id, type, action, reason } = req.body || {};
 
   if (!order_id || !TABLE_BY_TYPE[type] || !['confirmer', 'rejeter', 'fraude'].includes(action)) {
     return res.status(400).json({ error: 'Paramètres invalides' });
@@ -117,7 +119,14 @@ async function handleActionOrdre(req, res) {
   if (!order) return res.status(404).json({ error: 'Ordre introuvable' });
 
   if (action === 'rejeter') {
-    await supabaseAdmin.from(table).update({ status: 'rejete' }).eq('id', order_id);
+    await supabaseAdmin.from(table).update({ status: 'rejete', last_error: reason || null }).eq('id', order_id);
+    await sendTelegramAdmin(`🚫 Ordre rejeté — #${order_id} (${type})\n${reason ? 'Raison : ' + reason : 'Aucune raison précisée'}`);
+    if (order.whatsapp) {
+      await sendWhatsApp(
+        order.whatsapp,
+        `❌ Simba — Votre ordre #${order_id} a été rejeté.\n${reason ? 'Raison : ' + reason : 'Contactez le support pour plus de détails.'}`
+      );
+    }
   } else if (action === 'fraude') {
     await supabaseAdmin.from(table).update({ status: 'fraude' }).eq('id', order_id);
   } else if (action === 'confirmer') {
@@ -166,7 +175,7 @@ async function handleRetryDeposit(req, res) {
   const caller = await resolveCaller(req);
   requireRole(caller, ['createur', 'admin']);
 
-  const { order_id } = req.body || {};
+  const { order_id, new_id_bet1x } = req.body || {};
   if (!order_id) return res.status(400).json({ error: 'order_id requis' });
 
   const { data: order, error: fetchErr } = await supabaseAdmin.from('depot_orders').select('*').eq('id', order_id).maybeSingle();
@@ -175,12 +184,29 @@ async function handleRetryDeposit(req, res) {
   if (order.status === 'credite') return res.status(200).json({ ok: true, already_credited: true });
   if (!isMobcashConfigured()) return res.status(400).json({ error: 'MobCash non configuré — mode manuel, rien à relancer.' });
 
-  await mobcashDeposit(order.id_bet1x, order.montant);
-  await supabaseAdmin.from('depot_orders').update({ status: 'credite' }).eq('id', order_id);
+  // Après un échec MobCash "compte 1xBet invalide", l'admin peut corriger
+  // l'ID avant de relancer plutôt que de rejeter tout l'ordre.
+  const idBet1x = new_id_bet1x && new_id_bet1x.trim() ? new_id_bet1x.trim() : order.id_bet1x;
+
+  try {
+    await mobcashDeposit(idBet1x, order.montant);
+  } catch (mcErr) {
+    await supabaseAdmin.from('depot_orders').update({ id_bet1x: idBet1x, last_error: mcErr.message }).eq('id', order_id);
+    await sendTelegramAdmin(`❌ Relance manuelle #${order_id} toujours en échec (ID 1xBet ${idBet1x}) : ${mcErr.message}`);
+    return res.status(502).json({ error: 'Relance échouée : ' + mcErr.message });
+  }
+
+  await supabaseAdmin.from('depot_orders').update({
+    id_bet1x: idBet1x, status: 'credite', mobcash_status: null, last_error: null,
+  }).eq('id', order_id);
   await supabaseAdmin.from('audit_logs').insert({
-    action: 'admin_retry_deposit', actor: caller.email || caller.id, target: order_id,
+    action: 'admin_retry_deposit', actor: caller.email || caller.id, target: order_id, meta: { new_id_bet1x: idBet1x },
   });
-  await sendTelegramAdmin(`✅ Dépôt #${order_id} crédité après relance manuelle.`);
+  await sendTelegramAdmin(`✅ Dépôt #${order_id} crédité après relance manuelle${new_id_bet1x ? ` (nouvel ID 1xBet : ${idBet1x})` : ''}.`);
+  await sendWhatsApp(
+    order.whatsapp,
+    `✅ Simba — Dépôt #${order_id} crédité avec succès ! ${order.montant} DJF envoyés sur votre compte 1xBet ${idBet1x}.`
+  );
 
   return res.status(200).json({ ok: true });
 }
@@ -207,6 +233,22 @@ async function handleTestPayment(req, res) {
     : await mobcashPayout(userId, withdrawalCode, amount);
 
   return res.status(200).json({ ok: true, operation, result });
+}
+
+/* ----------------------- test WhatsApp (Green API) ----------------------- */
+async function handleTestWhatsapp(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Méthode non autorisée' });
+  const caller = await resolveCaller(req);
+  requireRole(caller, ['createur', 'admin']);
+
+  const { number, message } = req.body || {};
+  if (!number) return res.status(400).json({ error: 'number requis' });
+  if (!isGreenApiConfigured()) {
+    return res.status(400).json({ error: 'Green API non configuré (GREENAPI_API_URL / GREENAPI_ID_INSTANCE / GREENAPI_API_TOKEN manquants sur Vercel).' });
+  }
+
+  const result = await sendWhatsApp(number, message || '🦁 Simba — message de test WhatsApp (Green API).');
+  return res.status(result.ok ? 200 : 502).json({ ok: result.ok, result });
 }
 
 /* ----------------------- création agent ----------------------- */

@@ -12,20 +12,32 @@ create extension if not exists pgcrypto;
 -- 1. FONCTIONS UTILITAIRES
 -- =====================================================================
 
--- Compteur journalier par préfixe (D/R), remis à zéro chaque jour (heure
--- de Djibouti). Verrouillé (RLS sans policy) : accessible uniquement via
--- gen_order_ref(), jamais en direct par anon/authenticated.
+-- Compteur journalier PARTAGÉ dépôt+retrait, remis à zéro chaque jour
+-- (heure de Djibouti). Un seul compteur (pas par préfixe) : évite
+-- l'ambiguïté #19082026-001 qui pourrait sinon désigner un dépôt OU un
+-- retrait puisque l'ID ne porte plus de lettre de type.
+-- Migration depuis l'ancien schéma (seq_day, prefix, counter) : la table
+-- n'est recréée que si elle porte encore l'ancienne colonne "prefix" —
+-- un simple rejeu de ce script en cours de journée ne doit jamais faire
+-- table rase du compteur du jour (ça produirait des IDs déjà utilisés).
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'order_seq' and column_name = 'prefix'
+  ) then
+    drop table public.order_seq;
+  end if;
+end $$;
 create table if not exists public.order_seq (
-  seq_day  date not null,
-  prefix   text not null,
-  counter  int  not null default 0,
-  primary key (seq_day, prefix)
+  seq_day  date primary key,
+  counter  int  not null default 0
 );
 alter table public.order_seq enable row level security;
 
--- Génère une référence lisible {D|R}{MMDD}{compteur du jour} (ex: D08191,
--- R08192) — compteur remis à zéro chaque jour, par préfixe.
-create or replace function public.gen_order_ref(p_prefix text)
+-- Génère une référence DDMMYYYY-XXX (ex: 19082026-001), compteur du jour
+-- partagé entre dépôts et retraits.
+create or replace function public.gen_order_ref(p_prefix text default null)
 returns text
 language plpgsql
 security definer
@@ -35,17 +47,14 @@ declare
   v_day     date := (now() at time zone 'Africa/Djibouti')::date;
   v_counter int;
 begin
-  insert into public.order_seq (seq_day, prefix, counter)
-  values (v_day, p_prefix, 1)
-  on conflict (seq_day, prefix) do update set counter = public.order_seq.counter + 1
+  insert into public.order_seq (seq_day, counter)
+  values (v_day, 1)
+  on conflict (seq_day) do update set counter = public.order_seq.counter + 1
   returning counter into v_counter;
 
-  return p_prefix || to_char(v_day, 'MMDD') || v_counter::text;
+  return to_char(v_day, 'DDMMYYYY') || '-' || lpad(v_counter::text, 3, '0');
 end;
 $$;
-
-revoke all on function public.gen_order_ref(text) from public;
-grant execute on function public.gen_order_ref(text) to service_role;
 
 -- Trigger générique : maintient updated_at à jour
 create or replace function public.set_updated_at()
@@ -64,9 +73,9 @@ $$;
 -- =====================================================================
 
 create table if not exists public.depot_orders (
-  id                        text primary key default public.gen_order_ref('D'),
+  id                        text primary key default public.gen_order_ref(),
   status                    text not null default 'en_attente'
-                              check (status in ('en_attente','paiement_recu','credite','rejete','fraude')),
+                              check (status in ('en_attente','paiement_recu','credite','rejete','fraude','annule')),
   montant                   numeric not null check (montant >= 50),
   id_bet1x                  text not null check (char_length(id_bet1x) > 0),
   numero_waafi_expediteur   text not null check (char_length(numero_waafi_expediteur) > 0),
@@ -75,6 +84,9 @@ create table if not exists public.depot_orders (
   turnstile_token           text,
   lang                      text not null default 'fr',
   fraud_score               int not null default 0,
+  mobcash_status            text,
+  mobcash_attempts          int not null default 0,
+  last_error                text,
   created_at                timestamptz not null default now(),
   updated_at                timestamptz not null default now()
 );
@@ -83,11 +95,17 @@ alter table public.depot_orders add constraint depot_orders_montant_check check 
 alter table public.depot_orders alter column whatsapp set not null;
 alter table public.depot_orders drop constraint if exists depot_orders_whatsapp_check;
 alter table public.depot_orders add constraint depot_orders_whatsapp_check check (char_length(whatsapp) > 0);
+alter table public.depot_orders drop constraint if exists depot_orders_status_check;
+alter table public.depot_orders add constraint depot_orders_status_check
+  check (status in ('en_attente','paiement_recu','credite','rejete','fraude','annule'));
+alter table public.depot_orders add column if not exists mobcash_status text;
+alter table public.depot_orders add column if not exists mobcash_attempts int not null default 0;
+alter table public.depot_orders add column if not exists last_error text;
 
 create table if not exists public.retrait_orders (
-  id                        text primary key default public.gen_order_ref('R'),
+  id                        text primary key default public.gen_order_ref(),
   status                    text not null default 'en_attente'
-                              check (status in ('en_attente','paiement_recu','credite','rejete','fraude')),
+                              check (status in ('en_attente','paiement_recu','credite','rejete','fraude','annule')),
   montant                   numeric not null check (montant >= 250),
   id_bet1x                  text not null check (char_length(id_bet1x) > 0),
   numero_waafi_reception    text not null check (char_length(numero_waafi_reception) > 0),
@@ -96,6 +114,9 @@ create table if not exists public.retrait_orders (
   turnstile_token           text,
   lang                      text not null default 'fr',
   fraud_score               int not null default 0,
+  mobcash_status            text,
+  mobcash_attempts          int not null default 0,
+  last_error                text,
   created_at                timestamptz not null default now(),
   updated_at                timestamptz not null default now()
 );
@@ -104,6 +125,12 @@ alter table public.retrait_orders add constraint retrait_orders_montant_check ch
 alter table public.retrait_orders alter column whatsapp set not null;
 alter table public.retrait_orders drop constraint if exists retrait_orders_whatsapp_check;
 alter table public.retrait_orders add constraint retrait_orders_whatsapp_check check (char_length(whatsapp) > 0);
+alter table public.retrait_orders drop constraint if exists retrait_orders_status_check;
+alter table public.retrait_orders add constraint retrait_orders_status_check
+  check (status in ('en_attente','paiement_recu','credite','rejete','fraude','annule'));
+alter table public.retrait_orders add column if not exists mobcash_status text;
+alter table public.retrait_orders add column if not exists mobcash_attempts int not null default 0;
+alter table public.retrait_orders add column if not exists last_error text;
 
 create table if not exists public.waafi_notifications (
   id             bigserial primary key,
@@ -322,22 +349,26 @@ create policy alertes_etat_select_admin on public.alertes_etat
 -- reste de la table. C'est la seule voie de lecture publique des ordres.
 -- =====================================================================
 
--- Renvoie aussi id_bet1x/waafi_number/reference/whatsapp : accepté sciemment
--- malgré des IDs désormais séquentiels (D08191, D08192...) donc devinables
--- — décision explicite du créateur de privilégier le détail affiché au
--- client plutôt que l'anti-énumération stricte d'origine.
-create or replace function public.get_order_status(p_order_id text, p_type text)
+-- Renvoie aussi id_bet1x/waafi_number/reference/whatsapp/suivi MobCash :
+-- accepté sciemment malgré des IDs désormais séquentiels (DDMMYYYY-XXX)
+-- donc devinables — décision explicite du créateur de privilégier le
+-- détail affiché au client plutôt que l'anti-énumération stricte d'origine.
+drop function if exists public.get_order_status(text, text);
+create function public.get_order_status(p_order_id text, p_type text)
 returns table (
-  id           text,
-  type         text,
-  status       text,
-  montant      numeric,
-  id_bet1x     text,
-  waafi_number text,
-  reference    text,
-  whatsapp     text,
-  created_at   timestamptz,
-  updated_at   timestamptz
+  id               text,
+  type             text,
+  status           text,
+  montant          numeric,
+  id_bet1x         text,
+  waafi_number     text,
+  reference        text,
+  whatsapp         text,
+  mobcash_status   text,
+  mobcash_attempts int,
+  last_error       text,
+  created_at       timestamptz,
+  updated_at       timestamptz
 )
 language plpgsql
 security definer
@@ -349,6 +380,7 @@ begin
     return query
       select d.id, 'depot'::text, d.status, d.montant, d.id_bet1x,
              d.numero_waafi_expediteur, d.transfer_id, d.whatsapp,
+             d.mobcash_status, d.mobcash_attempts, d.last_error,
              d.created_at, d.updated_at
       from public.depot_orders d
       where d.id = p_order_id;
@@ -356,6 +388,7 @@ begin
     return query
       select r.id, 'retrait'::text, r.status, r.montant, r.id_bet1x,
              r.numero_waafi_reception, r.code_retrait_1x, r.whatsapp,
+             r.mobcash_status, r.mobcash_attempts, r.last_error,
              r.created_at, r.updated_at
       from public.retrait_orders r
       where r.id = p_order_id;
@@ -366,6 +399,31 @@ $$;
 
 revoke all on function public.get_order_status(text, text) from public;
 grant execute on function public.get_order_status(text, text) to anon, authenticated;
+
+-- Annulation client — seulement si en_attente (SECURITY DEFINER : anon n'a
+-- pas de droit UPDATE direct sur ces tables).
+create or replace function public.cancel_order(p_order_id text, p_type text)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_updated int;
+begin
+  if p_type = 'depot' then
+    update public.depot_orders set status = 'annule' where id = p_order_id and status = 'en_attente';
+  elsif p_type = 'retrait' then
+    update public.retrait_orders set status = 'annule' where id = p_order_id and status = 'en_attente';
+  else
+    return false;
+  end if;
+  get diagnostics v_updated = row_count;
+  return v_updated > 0;
+end;
+$$;
+revoke all on function public.cancel_order(text, text) from public;
+grant execute on function public.cancel_order(text, text) to anon, authenticated;
 
 -- =====================================================================
 -- 6bis. CRÉATION PUBLIQUE SÉCURISÉE — create_depot_order() / create_retrait_order()

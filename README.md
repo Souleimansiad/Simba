@@ -20,7 +20,8 @@ Plateforme d'échange Waafi ⇄ 1xBet : dépôt et retrait en quelques minutes.
 | `SUPABASE_SERVICE_ROLE_KEY` | Clé service_role Supabase (Dashboard → Settings → API) — **jamais côté client** |
 | `ADMIN_URL_TOKEN` | Doit être identique à la valeur codée en dur dans `index.html` (bypass créateur `?kp=TOKEN`) |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ADMIN_CHAT_ID`, `TELEGRAM_SUPPORT_BOT_TOKEN` | Bots Telegram (admin + support) |
-| `WHATSAPP_API_KEY`, `WHATSAPP_API_URL`, `WHATSAPP_AGENT_NUMBERS` | Notifications WhatsApp |
+| `GREENAPI_API_URL`, `GREENAPI_ID_INSTANCE`, `GREENAPI_API_TOKEN` | Notifications WhatsApp client (Green API — URL spécifique à l'instance, ex. `https://7107.api.greenapi.com`) |
+| `WHATSAPP_AGENT_NUMBERS` | Numéros WhatsApp des agents à notifier (liste séparée par des virgules, optionnel) |
 | `MOBCASH_CASHBOX_CODE`, `MOBCASH_LOGIN`, `MOBCASH_PASSWORD` | Identifiants API MobCash APP2APP (crédit/retrait 1xBet) — cashboxCode, login et mot de passe du caissier fournis par MobCash |
 | `SUPABASE_WEBHOOK_SECRET`, `SMS_WEBHOOK_SECRET`, `TELEGRAM_WEBHOOK_SECRET`, `CRON_SECRET` | Secrets optionnels de vérification des webhooks |
 

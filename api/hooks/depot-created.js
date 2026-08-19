@@ -20,7 +20,28 @@ export default async function handler(req, res) {
   if (!record || !record.id) return res.status(400).json({ error: 'Payload invalide' });
 
   try {
-    const { score, reasons, isFraud } = computeFraudScore(record, 'depot');
+    let { score, reasons, isFraud } = computeFraudScore(record, 'depot');
+
+    // Ordre suspect : même Transfer ID + même montant soumis à nouveau en
+    // peu de temps (tentative de rejouer une preuve de paiement déjà
+    // utilisée, ou double-soumission).
+    if (record.transfer_id) {
+      const since = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+      const { data: dupes } = await supabaseAdmin
+        .from('depot_orders')
+        .select('id')
+        .eq('transfer_id', record.transfer_id)
+        .eq('montant', record.montant)
+        .neq('id', record.id)
+        .not('status', 'in', '(rejete,fraude,annule)')
+        .gte('created_at', since)
+        .limit(1);
+      if (dupes && dupes.length > 0) {
+        score = Math.max(score, 100);
+        isFraud = true;
+        reasons = [...reasons, `Transfer ID + montant déjà soumis récemment (ordre #${dupes[0].id})`];
+      }
+    }
 
     if (score > 0) {
       await supabaseAdmin

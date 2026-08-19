@@ -233,6 +233,18 @@ footer.site{border-top:1px solid var(--card-border); padding:28px 0; text-align:
 .timeline li.active .t-dot{border-color:var(--primary); box-shadow:0 0 0 4px rgba(47,143,255,.2);}
 .timeline li.failed .t-dot{border-color:var(--danger); background:var(--danger); color:#fff;}
 .t-dot-pulse{width:8px; height:8px; border-radius:50%; background:var(--primary);}
+.suivi-state-icon{color:var(--primary-2); margin-bottom:10px;}
+.suivi-state-icon.success{color:var(--success);}
+.suivi-state-icon.failed{color:var(--danger);}
+.suivi-progress-label{font-size:.78rem; color:var(--text-dim); margin-top:18px; margin-bottom:6px; text-align:left;}
+.suivi-progress-bar{height:6px; border-radius:3px; background:var(--card-border); overflow:hidden;}
+.suivi-progress-fill{height:100%; background:var(--primary); transition:width .3s;}
+.suivi-progress-fill.success{background:var(--success);}
+.suivi-progress-fill.failed{background:var(--danger);}
+.suivi-submsg{margin-top:10px; font-size:.85rem; color:var(--text-dim); text-align:left;}
+.suivi-submsg.failed{color:var(--danger);}
+.suivi-reason{margin-top:6px; font-size:.85rem; text-align:left; padding:10px 12px; border-radius:10px; background:rgba(239,68,68,.1); color:var(--danger);}
+.suivi-actions{margin-top:18px; display:flex; gap:10px; flex-wrap:wrap;}
 @media (prefers-reduced-motion:no-preference){
   .t-dot-pulse{animation:pulse-dot 1.4s ease-in-out infinite;}
 }
@@ -246,6 +258,7 @@ footer.site{border-top:1px solid var(--card-border); padding:28px 0; text-align:
 .badge-credite{background:rgba(34,197,94,.15); color:var(--success);}
 .badge-rejete{background:rgba(148,163,184,.18); color:var(--text-dim);}
 .badge-fraude{background:rgba(239,68,68,.16); color:var(--danger);}
+.badge-annule{background:rgba(148,163,184,.18); color:var(--text-dim);}
 
 /* ============================= LOGIN ============================= */
 .auth-wrap{min-height:calc(100vh - 70px); display:flex; align-items:center; justify-content:center; padding:40px 20px;}
@@ -279,6 +292,11 @@ table.data-table td{padding:12px; border-bottom:1px solid var(--card-border); ve
 table.data-table tr.flash-new{animation:flashRow 1.6s ease;}
 @keyframes flashRow{0%{background:rgba(47,143,255,.25);}100%{background:transparent;}}
 .row-actions{display:flex; gap:6px;}
+.btn-expand{background:none; border:none; color:var(--text-dim); cursor:pointer; padding:4px; display:flex; align-items:center;}
+.btn-expand:hover{color:var(--text);}
+.btn-copy{background:none; border:none; color:var(--text-faint); cursor:pointer; padding:2px; display:inline-flex; align-items:center; vertical-align:middle;}
+.btn-copy:hover{color:var(--primary);}
+tr.detail-row td{background:var(--card-bg-alt, rgba(148,163,184,.06)); padding:14px 20px;}
 .empty-state{text-align:center; padding:40px 20px; color:var(--text-faint);}
 .form-inline{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin-bottom:18px;}
 .form-inline .field{margin-bottom:0; min-width:160px; flex:1;}
@@ -363,8 +381,15 @@ const KP_LANGS = {
     'form.captcha_label':'Vérification anti-robot', 'form.captcha_wrong':'Réponse incorrecte, réessayez.',
     'suivi.title':'Suivi de votre ordre', 'suivi.status.en_attente':'En attente',
     'suivi.status.paiement_recu':'Paiement reçu', 'suivi.status.credite':'Crédité avec succès',
-    'suivi.status.rejete':'Rejeté', 'suivi.status.fraude':'Bloqué (fraude suspectée)',
+    'suivi.status.rejete':'Paiement non reçu', 'suivi.status.fraude':'Paiement non reçu',
+    'suivi.status.annule':'Annulé',
     'suivi.not_found':'Ordre introuvable. Vérifiez le lien.',
+    'suivi.step1.title':'En attente de vérification', 'suivi.step2.title':'Paiement reçu — crédit 1xBet en cours',
+    'suivi.step3.success':'Crédité avec succès', 'suivi.step3.failed':'Paiement non reçu',
+    'suivi.progress':'Étape', 'suivi.cancel':'Annuler l\'ordre', 'suivi.cancel_confirm':'Annuler cet ordre ?',
+    'suivi.cancelled_ok':'Ordre annulé.', 'suivi.retry_msg':'Tentative échouée, nouvelle tentative en cours...',
+    'suivi.invalid_account':'Compte 1xBet invalide — contactez le support',
+    'suivi.reason':'Raison', 'suivi.need_help':'Besoin d\'aide ?',
     'suivi.detail.bet_id':'ID 1xBet', 'suivi.detail.waafi_depot':'Numéro Waafi expéditeur',
     'suivi.detail.waafi_retrait':'Numéro Waafi de réception', 'suivi.detail.ref_depot':'Transfer ID',
     'suivi.detail.ref_retrait':'Code retrait 1xBet', 'suivi.detail.whatsapp':'WhatsApp',
@@ -373,7 +398,7 @@ const KP_LANGS = {
     'login.email':'Email', 'login.password':'Mot de passe', 'login.submit':'Se connecter',
     'login.google':'Continuer avec Google', 'login.creator_mode':'Mode créateur actif (token URL)',
     'admin.dashboard':'Dashboard', 'admin.orders':'Ordres', 'admin.reserves':'Réserves',
-    'admin.agents':'Agents', 'admin.notifications':'Notifications', 'admin.testpay':'Test Paiement',
+    'admin.agents':'Agents', 'admin.notifications':'Notifications', 'admin.testpay':'Test Paiement', 'admin.testwa':'Test WhatsApp',
     'admin.logout':'Déconnexion',
   },
   en: {
@@ -412,8 +437,15 @@ const KP_LANGS = {
     'form.captcha_label':'Anti-bot check', 'form.captcha_wrong':'Wrong answer, try again.',
     'suivi.title':'Track your order', 'suivi.status.en_attente':'Pending',
     'suivi.status.paiement_recu':'Payment received', 'suivi.status.credite':'Successfully credited',
-    'suivi.status.rejete':'Rejected', 'suivi.status.fraude':'Blocked (suspected fraud)',
+    'suivi.status.rejete':'Payment not received', 'suivi.status.fraude':'Payment not received',
+    'suivi.status.annule':'Cancelled',
     'suivi.not_found':'Order not found. Check the link.',
+    'suivi.step1.title':'Pending verification', 'suivi.step2.title':'Payment received — 1xBet credit in progress',
+    'suivi.step3.success':'Successfully credited', 'suivi.step3.failed':'Payment not received',
+    'suivi.progress':'Step', 'suivi.cancel':'Cancel order', 'suivi.cancel_confirm':'Cancel this order?',
+    'suivi.cancelled_ok':'Order cancelled.', 'suivi.retry_msg':'Attempt failed, retrying...',
+    'suivi.invalid_account':'Invalid 1xBet account — contact support',
+    'suivi.reason':'Reason', 'suivi.need_help':'Need help?',
     'suivi.detail.bet_id':'1xBet ID', 'suivi.detail.waafi_depot':'Sender Waafi number',
     'suivi.detail.waafi_retrait':'Receiving Waafi number', 'suivi.detail.ref_depot':'Transfer ID',
     'suivi.detail.ref_retrait':'1xBet withdrawal code', 'suivi.detail.whatsapp':'WhatsApp',
@@ -422,7 +454,7 @@ const KP_LANGS = {
     'login.email':'Email', 'login.password':'Password', 'login.submit':'Sign in',
     'login.google':'Continue with Google', 'login.creator_mode':'Creator mode active (URL token)',
     'admin.dashboard':'Dashboard', 'admin.orders':'Orders', 'admin.reserves':'Reserves',
-    'admin.agents':'Agents', 'admin.notifications':'Notifications', 'admin.testpay':'Test Payment',
+    'admin.agents':'Agents', 'admin.notifications':'Notifications', 'admin.testpay':'Test Payment', 'admin.testwa':'Test WhatsApp',
     'admin.logout':'Log out',
   }
 };
@@ -478,6 +510,7 @@ const ICONS = {
   users: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
   bell: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
   flask: '<path d="M9 2v6l-6 10a2 2 0 0 0 1.8 3h14.4a2 2 0 0 0 1.8-3l-6-10V2"/><line x1="7" y1="14" x2="17" y2="14"/><line x1="9" y1="2" x2="15" y2="2"/>',
+  clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
 };
 function icon(name, size){
   size = size || 18;
@@ -874,7 +907,16 @@ function renderRetrait(app){
 }
 
 /* ------------------------------ SUIVI PAGE ------------------------------ */
-function orderType(id){ return id.startsWith('R') ? 'retrait' : 'depot'; }
+// Les IDs (DDMMYYYY-XXX) ne portent plus de lettre de type : on tente
+// dépôt puis retrait via get_order_status (RPC publique, sans exposer les
+// tables complètes).
+async function fetchOrderStatus(orderId){
+  let { data } = await sb.rpc('get_order_status', { p_order_id: orderId, p_type: 'depot' });
+  if (data && data.length) return data[0];
+  ({ data } = await sb.rpc('get_order_status', { p_order_id: orderId, p_type: 'retrait' }));
+  if (data && data.length) return data[0];
+  return null;
+}
 
 function timelineHtml(status){
   const steps = [
@@ -882,12 +924,11 @@ function timelineHtml(status){
     { key:'paiement_recu', label:t('suivi.status.paiement_recu') },
     { key:'credite', label:t('suivi.status.credite') },
   ];
-  const failed = status === 'rejete' || status === 'fraude';
+  const failed = status === 'rejete' || status === 'fraude' || status === 'annule';
   const order = ['en_attente','paiement_recu','credite'];
   const curIdx = order.indexOf(status);
   return `<ul class="timeline">` + steps.map((s, i) => {
     let cls = '';
-    if (failed && i === order.length - 1) { /* last step becomes failure marker below */ }
     if (!failed){
       if (i < curIdx) cls = 'done'; else if (i === curIdx) cls = 'active';
     } else {
@@ -900,8 +941,30 @@ function timelineHtml(status){
   ` : '') + `</ul>`;
 }
 
+// État visuel principal (icône + titre + étape courante) pour chaque statut.
+function suiviStateVisual(order){
+  const status = order.status;
+  if (status === 'en_attente') {
+    return { icon: icon('clock', 40), iconClass:'', title: t('suivi.step1.title'), step: 1, fillClass:'' };
+  }
+  if (status === 'paiement_recu') {
+    if (order.mobcash_status === 'echec_permanent') {
+      return { icon: icon('alert', 40), iconClass:'failed', title: t('suivi.step2.title'), step: 2, fillClass:'failed' };
+    }
+    return { icon: '<span class="spinner" style="width:36px;height:36px;border-width:3px;"></span>', iconClass:'', title: t('suivi.step2.title'), step: 2, fillClass:'' };
+  }
+  if (status === 'credite') {
+    return { icon: icon('check', 40), iconClass:'success', title: t('suivi.step3.success'), step: 3, fillClass:'success' };
+  }
+  return {
+    icon: icon('x', 40), iconClass:'failed',
+    title: status === 'annule' ? t('suivi.status.annule') : t('suivi.step3.failed'),
+    step: 3, fillClass:'failed',
+  };
+}
+
 function renderSuivi(app, orderId){
-  const type = orderType(orderId);
+  let currentType = null; // détecté au premier chargement
   app.innerHTML = `
     ${headerHtml(true, '#/')}
     <div class="container">
@@ -913,14 +976,24 @@ function renderSuivi(app, orderId){
   bindHeaderEvents();
 
   async function load(){
-    const { data, error } = await sb.rpc('get_order_status', { p_order_id: orderId, p_type: type });
+    const order = await fetchOrderStatus(orderId);
     const content = document.getElementById('suivi-content');
-    if (error || !data || data.length === 0){
+    if (!order){
       content.innerHTML = `<p>${t('suivi.not_found')}</p>`;
       return;
     }
-    renderOrderStatus(content, data[0]);
+    currentType = order.type;
+    renderOrderStatus(content, order);
   }
+
+  async function cancelOrder(){
+    if (!confirm(t('suivi.cancel_confirm'))) return;
+    const { error } = await sb.rpc('cancel_order', { p_order_id: orderId, p_type: currentType });
+    if (error) { toast(error.message, 'error'); return; }
+    toast(t('suivi.cancelled_ok'), 'success');
+    load();
+  }
+
   function renderOrderStatus(content, order){
     const isDepot = order.type === 'depot';
     const rows = [
@@ -932,12 +1005,27 @@ function renderSuivi(app, orderId){
       [t('suivi.detail.updated'), new Date(order.updated_at).toLocaleString()],
     ].filter(Boolean);
 
+    const visual = suiviStateVisual(order);
+    const showFailureBlock = (order.status === 'rejete' || order.status === 'fraude' || order.status === 'annule')
+      || (order.status === 'paiement_recu' && order.mobcash_status === 'echec_permanent');
+    const showRetryMsg = order.status === 'paiement_recu' && order.mobcash_status === 'retry';
+    const showCancel = order.status === 'en_attente';
+
     content.innerHTML = `
-      <h2>${t('suivi.title')}</h2>
+      <div class="suivi-state-icon ${visual.iconClass}">${visual.icon}</div>
+      <h2>${visual.title}</h2>
       <div class="suivi-id mono">#${order.id}</div>
       <div class="badge badge-${order.status}">${t('suivi.status.' + order.status)}</div>
       <div style="margin-top:14px;color:var(--text-dim);font-family:var(--font-mono);">${Number(order.montant).toLocaleString()} DJF</div>
+
+      <div class="suivi-progress-label">${t('suivi.progress')} ${visual.step}/3</div>
+      <div class="suivi-progress-bar"><div class="suivi-progress-fill ${visual.fillClass}" style="width:${(visual.step/3*100)}%"></div></div>
+
+      ${showRetryMsg ? `<div class="suivi-submsg">${t('suivi.retry_msg')}</div>` : ''}
+      ${showFailureBlock && order.last_error ? `<div class="suivi-reason"><strong>${t('suivi.reason')}:</strong> ${/payerNickname/i.test(order.last_error) ? t('suivi.invalid_account') : order.last_error}</div>` : ''}
+
       ${timelineHtml(order.status)}
+
       <div class="suivi-details">
         ${rows.map(([label, value]) => `
           <div class="suivi-detail-row">
@@ -946,7 +1034,19 @@ function renderSuivi(app, orderId){
           </div>
         `).join('')}
       </div>
+
+      ${showCancel || showFailureBlock ? `
+        <div class="suivi-actions">
+          ${showCancel ? `<button class="btn btn-outline" id="suivi-cancel-btn">${icon('x', 16)} ${t('suivi.cancel')}</button>` : ''}
+          ${showFailureBlock ? `
+            <a class="btn btn-outline" href="${CONFIG.WHATSAPP_SUPPORT_URL}" target="_blank" rel="noopener">${icon('message', 16)} WhatsApp</a>
+            <a class="btn btn-outline" href="${CONFIG.TELEGRAM_SUPPORT_URL}" target="_blank" rel="noopener">${icon('send', 16)} Telegram</a>
+          ` : ''}
+        </div>
+      ` : ''}
     `;
+
+    if (showCancel) document.getElementById('suivi-cancel-btn').addEventListener('click', cancelOrder);
   }
   load();
 
@@ -1034,6 +1134,7 @@ const ADMIN_TABS = [
   { key:'agents', icon:'users', roles:['createur','admin'] },
   { key:'notifications', icon:'bell', roles:['createur','admin','support'] },
   { key:'testpay', icon:'flask', roles:['createur','admin'] },
+  { key:'testwa', icon:'message', roles:['createur','admin'] },
 ];
 
 function renderAdmin(app){
@@ -1072,6 +1173,7 @@ function renderAdmin(app){
   else if (state.adminTab === 'agents') renderAdminAgents(main);
   else if (state.adminTab === 'notifications') renderAdminNotifications(main);
   else if (state.adminTab === 'testpay') renderAdminTestPay(main);
+  else if (state.adminTab === 'testwa') renderAdminTestWa(main);
 }
 
 /* --- Dashboard --- */
@@ -1119,25 +1221,28 @@ function renderAdminDashboard(main){
 }
 
 /* --- Orders --- */
+const STALE_MS = 30 * 60 * 1000;
+
 function renderAdminOrders(main){
   main.innerHTML = `
     <div class="filter-chips" id="order-chips">
-      ${['tous','en_attente','depots','retraits','credite','rejete','fraude'].map(f => `<button class="chip ${f==='tous'?'active':''}" data-filter="${f}">${f}</button>`).join('')}
+      ${['tous','en_attente','depots','retraits','credite','rejete','fraude','annule'].map(f => `<button class="chip ${f==='tous'?'active':''}" data-filter="${f}">${f}</button>`).join('')}
     </div>
     <div class="card" style="padding:0;overflow-x:auto;">
       <table class="data-table" id="orders-table">
-        <thead><tr><th>ID</th><th>Type</th><th>Statut</th><th>Montant</th><th>ID 1xBet</th><th>Créé</th><th></th></tr></thead>
+        <thead><tr><th></th><th>ID</th><th>Type</th><th>Statut</th><th>Montant</th><th>ID 1xBet</th><th>Créé</th><th></th></tr></thead>
         <tbody id="orders-tbody"></tbody>
       </table>
     </div>
   `;
   if (!state.session){
-    document.getElementById('orders-tbody').innerHTML = `<tr><td colspan="7"><div class="empty-state">Connectez-vous avec un compte Supabase Auth pour voir les ordres en temps réel.</div></td></tr>`;
+    document.getElementById('orders-tbody').innerHTML = `<tr><td colspan="8"><div class="empty-state">Connectez-vous avec un compte Supabase Auth pour voir les ordres en temps réel.</div></td></tr>`;
     return;
   }
 
   let allOrders = [];
   let currentFilter = 'tous';
+  const expanded = new Set();
 
   function passesFilter(o){
     if (currentFilter === 'tous') return true;
@@ -1146,15 +1251,62 @@ function renderAdminOrders(main){
     return o.status === currentFilter;
   }
 
+  function copyBtn(value){
+    return `<button class="btn-copy" data-copy="${String(value).replace(/"/g,'&quot;')}" title="Copier">${icon('copy', 13)}</button>`;
+  }
+
+  function detailRowHtml(o){
+    const isDepot = o.type === 'depot';
+    const rows = [
+      ['ID', o.id],
+      ['ID 1xBet', o.id_bet1x],
+      [isDepot ? 'N° Waafi expéditeur' : 'N° Waafi réception', isDepot ? o.numero_waafi_expediteur : o.numero_waafi_reception],
+      [isDepot ? 'Transfer ID' : 'Code retrait 1xBet', isDepot ? (o.transfer_id || '—') : o.code_retrait_1x],
+      ['WhatsApp', o.whatsapp || '—'],
+      ['Score fraude', o.fraud_score],
+      ['Statut MobCash', o.mobcash_status || '—'],
+      ['Tentatives MobCash', o.mobcash_attempts || 0],
+      ['Dernière erreur', o.last_error || '—'],
+      ['Créé le', new Date(o.created_at).toLocaleString()],
+      ['Mis à jour le', new Date(o.updated_at).toLocaleString()],
+    ];
+    const retryPanel = (isDepot && o.status === 'paiement_recu' && o.mobcash_status === 'echec_permanent') ? `
+      <div class="field" style="margin-top:10px;max-width:320px;">
+        <label>Nouvel ID 1xBet (optionnel) puis relancer</label>
+        <div style="display:flex;gap:8px;">
+          <input type="text" class="mono-input" id="new-bet-id-${o.id}" placeholder="${o.id_bet1x}">
+          <button class="btn btn-sm btn-success" data-retry-id="${o.id}">${icon('bolt', 14)} Relancer</button>
+        </div>
+      </div>
+    ` : '';
+    return `
+      <tr class="detail-row"><td colspan="8">
+        <div class="suivi-details" style="margin-top:0;border-top:none;">
+          ${rows.map(([label, value]) => `
+            <div class="suivi-detail-row">
+              <span class="suivi-detail-label">${label}</span>
+              <span class="suivi-detail-value mono">${value} ${copyBtn(value)}</span>
+            </div>
+          `).join('')}
+        </div>
+        ${retryPanel}
+      </td></tr>
+    `;
+  }
+
   function renderRows(newId){
     const tbody = document.getElementById('orders-tbody');
     const rows = allOrders.filter(passesFilter).sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
-    if (rows.length === 0){ tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">Aucun ordre</div></td></tr>`; return; }
-    tbody.innerHTML = rows.map(o => `
+    if (rows.length === 0){ tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">Aucun ordre</div></td></tr>`; return; }
+    tbody.innerHTML = rows.map(o => {
+      const isStale = (o.status === 'en_attente' || o.status === 'paiement_recu') && (Date.now() - new Date(o.created_at).getTime() > STALE_MS);
+      const isFraudy = o.status === 'fraude' || Number(o.fraud_score) > 0;
+      return `
       <tr class="${o.id === newId ? 'flash-new' : ''}">
+        <td><button class="btn-expand" data-expand="${o.id}">${expanded.has(o.id) ? icon('arrowUp', 14) : icon('arrowDown', 14)}</button></td>
         <td class="mono">${o.id}</td>
         <td>${o.type}</td>
-        <td><span class="badge badge-${o.status}">${o.status}</span></td>
+        <td><span class="badge badge-${o.status}">${o.status}</span> ${isStale ? '⏰' : ''} ${isFraudy ? '🚨' : ''}</td>
         <td class="mono">${Number(o.montant).toLocaleString()}</td>
         <td class="mono">${o.id_bet1x || ''}</td>
         <td>${new Date(o.created_at).toLocaleString()}</td>
@@ -1166,13 +1318,43 @@ function renderAdminOrders(main){
           ` : ''}
         </td>
       </tr>
-    `).join('');
+      ${expanded.has(o.id) ? detailRowHtml(o) : ''}
+    `;
+    }).join('');
+
     tbody.querySelectorAll('button[data-act]').forEach(btn => {
       btn.addEventListener('click', async () => {
+        let reason = null;
+        if (btn.dataset.act === 'rejeter') {
+          reason = prompt('Raison du rejet (optionnel) :') || '';
+        }
         btn.disabled = true;
         try {
-          await apiFetch('admin?action=action-ordre', { method:'POST', body:{ order_id: btn.dataset.id, type: btn.dataset.type, action: btn.dataset.act } });
+          await apiFetch('admin?action=action-ordre', { method:'POST', body:{ order_id: btn.dataset.id, type: btn.dataset.type, action: btn.dataset.act, reason } });
           toast('Action appliquée', 'success');
+        } catch (err) { toast(err.message, 'error'); btn.disabled = false; }
+      });
+    });
+    tbody.querySelectorAll('button[data-expand]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.expand;
+        if (expanded.has(id)) expanded.delete(id); else expanded.add(id);
+        renderRows();
+      });
+    });
+    tbody.querySelectorAll('button[data-copy]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        navigator.clipboard.writeText(btn.dataset.copy).then(() => toast('Copié', 'success'));
+      });
+    });
+    tbody.querySelectorAll('button[data-retry-id]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const orderId = btn.dataset.retryId;
+        const newId = document.getElementById('new-bet-id-' + orderId).value.trim();
+        btn.disabled = true;
+        try {
+          await apiFetch('admin?action=retry-deposit', { method:'POST', body:{ order_id: orderId, new_id_bet1x: newId || undefined } });
+          toast('Relance effectuée', 'success');
         } catch (err) { toast(err.message, 'error'); btn.disabled = false; }
       });
     });
@@ -1330,6 +1512,29 @@ function renderAdminTestPay(main){
         amount: Number(document.getElementById('tp-amount').value),
         operation: document.getElementById('tp-op').value,
         withdrawalCode: document.getElementById('tp-code').value.trim(),
+      }});
+      resultEl.textContent = JSON.stringify(res, null, 2);
+    } catch (err) { resultEl.textContent = 'Erreur: ' + err.message; }
+  });
+}
+
+/* --- Test WhatsApp (Green API) --- */
+function renderAdminTestWa(main){
+  main.innerHTML = `
+    <div class="card" style="max-width:480px;">
+      <div class="field"><label>Numéro WhatsApp (avec indicatif pays)</label><input type="text" id="tw-number" placeholder="25377xxxxxx"></div>
+      <div class="field"><label>Message</label><input type="text" id="tw-message" placeholder="🦁 Simba — message de test WhatsApp (Green API)."></div>
+      <button class="btn btn-primary btn-block" id="tw-submit">Tester</button>
+      <pre id="tw-result" class="mono" style="margin-top:14px;white-space:pre-wrap;font-size:.78rem;color:var(--text-dim);"></pre>
+    </div>
+  `;
+  document.getElementById('tw-submit').addEventListener('click', async () => {
+    const resultEl = document.getElementById('tw-result');
+    resultEl.textContent = 'Envoi…';
+    try {
+      const res = await apiFetch('admin?action=test-whatsapp', { method:'POST', body:{
+        number: document.getElementById('tw-number').value.trim(),
+        message: document.getElementById('tw-message').value.trim(),
       }});
       resultEl.textContent = JSON.stringify(res, null, 2);
     } catch (err) { resultEl.textContent = 'Erreur: ' + err.message; }
