@@ -1263,12 +1263,12 @@ function renderAdminAgents(main){
 /* --- Notifications --- */
 function renderAdminNotifications(main){
   main.innerHTML = `<div class="card" style="padding:0;overflow-x:auto;">
-    <table class="data-table"><thead><tr><th>Type</th><th>Message</th><th>Transfer ID</th><th>Montant</th><th>Ordre</th><th>Date</th></tr></thead><tbody id="notif-tbody"><tr><td colspan="6">Chargement…</td></tr></tbody></table>
+    <table class="data-table"><thead><tr><th>Type</th><th>Message</th><th>Transfer ID</th><th>Montant</th><th>Expéditeur</th><th>Ordre</th><th>Date</th></tr></thead><tbody id="notif-tbody"><tr><td colspan="7">Chargement…</td></tr></tbody></table>
   </div>`;
   sb.from('waafi_notifications').select('*').order('created_at', { ascending:false }).limit(100).then(({ data, error }) => {
     const tbody = document.getElementById('notif-tbody');
-    if (error){ tbody.innerHTML = `<tr><td colspan="6">Erreur</td></tr>`; return; }
-    tbody.innerHTML = (data||[]).map(n => `<tr><td>${n.type}</td><td>${n.message||''}</td><td class="mono">${n.transfer_id||''}</td><td class="mono">${n.montant||''}</td><td class="mono">${n.order_id||''}</td><td>${new Date(n.created_at).toLocaleString()}</td></tr>`).join('') || `<tr><td colspan="6"><div class="empty-state">Aucune notification</div></td></tr>`;
+    if (error){ tbody.innerHTML = `<tr><td colspan="7">Erreur</td></tr>`; return; }
+    tbody.innerHTML = (data||[]).map(n => `<tr><td>${n.type}</td><td>${n.message||''}</td><td class="mono">${n.transfer_id||''}</td><td class="mono">${n.montant||''}</td><td class="mono">${n.sender_number||''}</td><td class="mono">${n.order_id||''}</td><td>${new Date(n.created_at).toLocaleString()}</td></tr>`).join('') || `<tr><td colspan="7"><div class="empty-state">Aucune notification</div></td></tr>`;
   });
 }
 

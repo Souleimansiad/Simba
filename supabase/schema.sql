@@ -72,14 +72,16 @@ create table if not exists public.retrait_orders (
 );
 
 create table if not exists public.waafi_notifications (
-  id           bigserial primary key,
-  type         text not null,
-  message      text,
-  transfer_id  text,
-  montant      numeric,
-  order_id     text,
-  created_at   timestamptz not null default now()
+  id             bigserial primary key,
+  type           text not null,
+  message        text,
+  transfer_id    text,
+  montant        numeric,
+  sender_number  text,
+  order_id       text,
+  created_at     timestamptz not null default now()
 );
+alter table public.waafi_notifications add column if not exists sender_number text;
 
 -- Déduplication anti-double-crédit : transfer_id est la clé primaire.
 create table if not exists public.ordre_traite (

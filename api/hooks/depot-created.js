@@ -2,6 +2,8 @@ import { supabaseAdmin } from '../_lib/supabase.js';
 import { computeFraudScore } from '../_lib/fraud.js';
 import { sendTelegramAdmin } from '../_lib/telegram.js';
 import { notifyAgentsWhatsApp } from '../_lib/whatsapp.js';
+import { verifyDepotMatch } from '../_lib/waafiMatch.js';
+import { creditDepot, flagMismatch } from '../_lib/depotCredit.js';
 
 // Configurer ce endpoint comme Database Webhook Supabase :
 // INSERT on public.depot_orders -> POST https://<domain>/api/hooks/depot-created
@@ -46,7 +48,33 @@ export default async function handler(req, res) {
     await sendTelegramAdmin(lines.join('\n'));
     await notifyAgentsWhatsApp(`Nouveau dépôt #${record.id} — ${record.montant} DJF${isFraud ? ' (FRAUDE SUSPECTÉE)' : ''}`);
 
-    return res.status(200).json({ ok: true, fraud_score: score, is_fraud: isFraud });
+    // Le client paie souvent AVANT de remplir le formulaire : le SMS Waafi
+    // (relayé par MacroDroid) peut donc déjà être stocké au moment où cet
+    // ordre est créé. On le cherche tout de suite au lieu d'attendre un SMS
+    // qui ne viendra plus (il est déjà arrivé et reparti).
+    let confirmation = null;
+    if (!isFraud && record.transfer_id) {
+      const { data: sms } = await supabaseAdmin
+        .from('waafi_notifications')
+        .select('*')
+        .eq('transfer_id', record.transfer_id)
+        .eq('type', 'sms_received')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (sms) {
+        const verif = verifyDepotMatch(record, sms);
+        if (verif.ok) {
+          confirmation = await creditDepot(record, record.transfer_id);
+        } else {
+          await flagMismatch(record, verif.reasons);
+          confirmation = { confirmed: false, reasons: verif.reasons };
+        }
+      }
+    }
+
+    return res.status(200).json({ ok: true, fraud_score: score, is_fraud: isFraud, confirmation });
   } catch (err) {
     console.error('[depot-created]', err);
     return res.status(500).json({ error: err.message });

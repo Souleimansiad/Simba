@@ -1,24 +1,19 @@
 import { supabaseAdmin } from './_lib/supabase.js';
-import { mobcashDeposit, isMobcashConfigured } from './_lib/mobcash.js';
 import { sendTelegramAdmin } from './_lib/telegram.js';
+import { parseWaafiText, verifyDepotMatch } from './_lib/waafiMatch.js';
+import { creditDepot, flagMismatch } from './_lib/depotCredit.js';
 
 // Reçoit les SMS/notifications Waafi relayés par MacroDroid (sur le téléphone
 // recevant les paiements). Accepte plusieurs formats de body JSON :
-// { text | message | notification, transfer_id?, montant? } — le texte brut
-// est parsé par expression régulière si transfer_id/montant ne sont pas
-// fournis explicitement. Le secret (SMS_WEBHOOK_SECRET) peut être envoyé
-// soit en header "x-sms-secret", soit en champ "secret" du body JSON
-// (MacroDroid ne permettant pas toujours facilement d'ajouter un header).
-
-function extractFromText(text) {
-  if (!text) return { transferId: null, montant: null };
-  const idMatch = text.match(/(?:trx|transaction|ref(?:erence)?|id)[\s.:#]*([A-Za-z0-9]{6,})/i);
-  const amountMatch = text.match(/(?:djf|amount|montant)[^\d]{0,6}([\d,.]+)/i) || text.match(/([\d,.]{3,})\s*(?:djf)/i);
-  return {
-    transferId: idMatch ? idMatch[1] : null,
-    montant: amountMatch ? Number(amountMatch[1].replace(/[,.](?=\d{3}\b)/g, '').replace(',', '.')) : null,
-  };
-}
+// { text | message | notification, transfer_id?, montant?, sender_number? }
+// — le texte brut est parsé si ces champs ne sont pas fournis explicitement.
+// Le secret (SMS_WEBHOOK_SECRET) peut être envoyé soit en header
+// "x-sms-secret", soit en champ "secret" du body JSON (MacroDroid ne
+// permettant pas toujours facilement d'ajouter un header).
+//
+// Chaque SMS reçu est toujours stocké (même sans ordre correspondant), pour
+// que hooks/depot-created.js puisse le retrouver si le client remplit le
+// formulaire de dépôt APRÈS avoir payé (cas le plus courant).
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Méthode non autorisée' });
@@ -32,9 +27,10 @@ export default async function handler(req, res) {
   }
 
   const rawText = body.text || body.message || body.notification;
-  const extracted = extractFromText(rawText);
-  const transferId = body.transfer_id || extracted.transferId;
-  const montant = body.montant != null ? Number(body.montant) : extracted.montant;
+  const parsed = parseWaafiText(rawText);
+  const transferId = body.transfer_id || parsed.transferId;
+  const montant = body.montant != null ? Number(body.montant) : parsed.montant;
+  const senderNumber = body.sender_number || parsed.senderNumber;
 
   try {
     await supabaseAdmin.from('waafi_notifications').insert({
@@ -42,6 +38,7 @@ export default async function handler(req, res) {
       message: rawText || null,
       transfer_id: transferId,
       montant,
+      sender_number: senderNumber,
     });
 
     if (!transferId) {
@@ -61,42 +58,14 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, matched: false, reason: 'order_not_found' });
     }
 
-    // Anti-double-crédit atomique : transfer_id est clé primaire de ordre_traite.
-    const { error: dedupeError } = await supabaseAdmin
-      .from('ordre_traite')
-      .insert({ transfer_id: transferId, order_id: order.id });
-
-    if (dedupeError) {
-      if (dedupeError.code === '23505') {
-        return res.status(200).json({ ok: true, matched: true, already_processed: true });
-      }
-      throw dedupeError;
+    const verif = verifyDepotMatch(order, { montant, sender_number: senderNumber });
+    if (!verif.ok) {
+      await flagMismatch(order, verif.reasons);
+      return res.status(200).json({ ok: true, matched: true, confirmed: false, reasons: verif.reasons });
     }
 
-    await supabaseAdmin.from('depot_orders').update({ status: 'paiement_recu' }).eq('id', order.id);
-
-    // Tant que MobCash n'est pas configuré : paiement Waafi confirmé (SMS
-    // matché), mais le crédit 1xBet se fait manuellement — un agent recharge
-    // le compte puis clique "Confirmer" dans le panneau admin.
-    if (!isMobcashConfigured()) {
-      await sendTelegramAdmin(`💰 Paiement Waafi reçu — Dépôt #${order.id} (${order.montant} DJF → 1xBet ${order.id_bet1x}). Créditez manuellement puis confirmez sur le panneau admin.`);
-      return res.status(200).json({ ok: true, matched: true, credited: false, manual: true });
-    }
-
-    try {
-      await mobcashDeposit(order.id_bet1x, order.montant);
-      await supabaseAdmin.from('depot_orders').update({ status: 'credite' }).eq('id', order.id);
-      await sendTelegramAdmin(`✅ Dépôt #${order.id} crédité automatiquement (${order.montant} DJF → ${order.id_bet1x})`);
-      return res.status(200).json({ ok: true, matched: true, credited: true });
-    } catch (mcErr) {
-      await supabaseAdmin.from('alertes_etat').insert({
-        type: 'mobcash_credit_failed',
-        order_id: order.id,
-        collection: 'depot_orders',
-      });
-      await sendTelegramAdmin(`❌ Paiement Waafi reçu pour #${order.id} mais crédit MobCash échoué : ${mcErr.message}. Intervention manuelle requise.`);
-      return res.status(200).json({ ok: true, matched: true, credited: false, error: mcErr.message });
-    }
+    const result = await creditDepot(order, transferId);
+    return res.status(200).json({ ok: true, matched: true, confirmed: true, ...result });
   } catch (err) {
     console.error('[sms-webhook]', err);
     return res.status(500).json({ error: err.message });
