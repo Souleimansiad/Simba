@@ -54,7 +54,17 @@ export default async function handler(req, res) {
       .maybeSingle();
 
     if (!order) {
-      await sendTelegramAdmin(`⚠️ SMS Waafi reçu (Transfer ID ${transferId}, ${montant ?? '?'} DJF) — aucun ordre en attente correspondant.`);
+      // Cas normal : le client paie avant de remplir le formulaire. Ce
+      // n'est pas une anomalie — juste une confirmation que le paiement est
+      // enregistré et attend l'ordre (voir hooks/depot-created.js, qui
+      // retrouvera ce SMS dès la création de l'ordre).
+      await sendTelegramAdmin(
+        `📩 SMS Waafi reçu — Paiement enregistré\n\n` +
+        `Transfer-ID: ${transferId}\n` +
+        `Montant: ${montant ?? '?'} DJF\n` +
+        `Expéditeur: ${senderNumber ?? '?'}\n\n` +
+        `✅ En attente de l'ordre client — confirmation automatique dès soumission.`
+      );
       return res.status(200).json({ ok: true, matched: false, reason: 'order_not_found' });
     }
 
