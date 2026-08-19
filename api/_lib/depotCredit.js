@@ -85,7 +85,21 @@ export async function creditDepot(order, transferId) {
     .insert({ transfer_id: transferId, order_id: order.id });
 
   if (dedupeError) {
-    if (dedupeError.code === '23505') return { already_processed: true };
+    if (dedupeError.code === '23505') {
+      // Ce transfer_id est déjà présent dans ordre_traite. Deux cas très
+      // différents se cachent derrière le même code d'erreur : (a) c'est CE
+      // même ordre qui repasse ici (webhook rejoué) — rien à faire ; (b) un
+      // AUTRE ordre a déjà consommé cette preuve de paiement — celui-ci ne
+      // peut pas être crédité une deuxième fois et doit le dire clairement
+      // au lieu de rester bloqué en silence sur "en_attente" pour toujours.
+      const { data: existing } = await supabaseAdmin
+        .from('ordre_traite')
+        .select('order_id')
+        .eq('transfer_id', transferId)
+        .maybeSingle();
+      if (existing && existing.order_id === order.id) return { already_processed: true };
+      return flagDuplicateTransfer(order, existing ? existing.order_id : null);
+    }
     throw dedupeError;
   }
 
@@ -133,4 +147,30 @@ export async function flagMismatch(order, reasons) {
   await sendTelegramAdmin(
     `⚠️ Dépôt #${order.id} — paiement NON confirmé automatiquement (${reasons.join(' ; ')}). Vérification manuelle requise avant de créditer.`
   );
+}
+
+// Le Transfer-ID de cet ordre a déjà été crédité pour un AUTRE ordre —
+// impossible de créditer deux fois la même preuve de paiement Waafi.
+// Traité comme une fraude (même sévérité que le doublon détecté à la
+// création dans hooks/depot-created.js) plutôt que laissé bloqué en
+// silence sur "en_attente".
+async function flagDuplicateTransfer(order, existingOrderId) {
+  await supabaseAdmin.from('depot_orders').update({
+    status: 'fraude',
+    last_error: `Transfer-ID déjà utilisé par l'ordre #${existingOrderId || '?'}`,
+  }).eq('id', order.id);
+  await supabaseAdmin.from('alertes_etat').insert({
+    type: 'depot_duplicate_transfer',
+    order_id: order.id,
+    collection: 'depot_orders',
+  });
+  await sendTelegramAdmin(
+    `🚫 Dépôt #${order.id} — Transfer-ID déjà utilisé par l'ordre #${existingOrderId || '?'}. ` +
+    `Ce paiement Waafi a déjà été crédité ailleurs, impossible de le créditer une deuxième fois.`
+  );
+  await sendWhatsApp(
+    order.whatsapp,
+    `❌ Simba — Votre dépôt #${order.id} n'a pas pu être confirmé. Contactez le support pour plus de détails.`
+  );
+  return { credited: false, duplicate: true, existing_order_id: existingOrderId };
 }
