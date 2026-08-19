@@ -27,7 +27,7 @@ async function attemptMobcashDeposit(order) {
       mobcash_status: 'echec_permanent',
       last_error: err.message,
     }).eq('id', order.id);
-    return { success: false, attempts: 1, error: err, permanent };
+    return { success: false, attempts: 1, error: err, permanent, ambiguous: !!err.ambiguous };
   }
 }
 
@@ -51,11 +51,13 @@ async function finalizeCreditResult(order, result) {
   // relancer, l'admin doit vérifier l'historique MobCash du caissier pour
   // confirmer qu'aucun dépôt n'a déjà été effectué.
   await supabaseAdmin.from('alertes_etat').insert({ type: 'mobcash_credit_failed', order_id: order.id, collection: 'depot_orders' });
-  const reasonLabel = result.permanent ? 'Compte 1xBet invalide' : 'échec MobCash';
+  const reasonLabel = result.permanent ? 'Compte 1xBet invalide' : result.ambiguous ? 'réponse ambiguë' : 'échec MobCash';
   await sendTelegramAdmin(
-    `❌ Échec — Dépôt #${order.id}\n` +
-    `Paiement Waafi confirmé mais crédit MobCash échoué (${reasonLabel}) : ${result.error.message}\n` +
-    `⚠️ Vérifier l'historique MobCash du caissier AVANT de relancer (le dépôt a pu être exécuté malgré cette erreur).`
+    (result.ambiguous ? `❓ Résultat incertain — Dépôt #${order.id}\n` : `❌ Échec — Dépôt #${order.id}\n`) +
+    `Paiement Waafi confirmé, crédit MobCash ${result.ambiguous ? 'non confirmé' : 'échoué'} (${reasonLabel}) : ${result.error.message}\n` +
+    (result.ambiguous
+      ? `⚠️ MobCash n'a confirmé NI le succès NI l'échec — vérifier l'historique MobCash du caissier pour savoir si le dépôt a déjà été exécuté avant de relancer.`
+      : `⚠️ Vérifier l'historique MobCash du caissier AVANT de relancer (le dépôt a pu être exécuté malgré cette erreur).`)
   );
   await sendWhatsApp(
     order.whatsapp,

@@ -142,6 +142,14 @@ async function mobileRpc(path, accessToken, params) {
   return { ...(entry.result || {}), _raw: rawText.slice(0, 300) };
 }
 
+// entry.error (voir mobileRpc) est le signal d'échec fiable côté protocole
+// JSON-RPC. result.success est une confirmation explicite quand elle est
+// présente, mais MobCash renvoie parfois result:{} (ni error, ni success) —
+// constaté en test réel : deux dépôts dans ce cas précis ont en fait été
+// exécutés (visibles dans l'historique MobCash) alors que ce code les
+// signalait comme "refusés". On distingue donc explicitement ce troisième
+// cas (ambiguous) d'un vrai refus, pour ne plus affirmer un échec qui n'en
+// est peut-être pas un.
 export async function mobcashDeposit(payerID, montant) {
   return callMobCash(async () => {
     const { sessionID, userID, accessToken } = await mobcashLogin();
@@ -152,7 +160,12 @@ export async function mobcashDeposit(payerID, montant) {
       sessionID,
       userID,
     });
-    if (!result.success) throw new Error('Dépôt MobCash refusé : ' + JSON.stringify(result));
+    if (result.success === false) throw new Error('Dépôt MobCash refusé : ' + JSON.stringify(result));
+    if (result.success !== true) {
+      const err = new Error('Réponse MobCash ambiguë (ni succès ni erreur confirmés) : ' + JSON.stringify(result));
+      err.ambiguous = true;
+      throw err;
+    }
     return result;
   });
 }
@@ -178,7 +191,12 @@ export async function mobcashPayout(payerID, withdrawalCode, montant) {
       userID,
       withdraw: { amount: validatedAmount, payerID, withdrawalCode },
     });
-    if (!result.success) throw new Error('Retrait MobCash refusé : ' + JSON.stringify(result));
+    if (result.success === false) throw new Error('Retrait MobCash refusé : ' + JSON.stringify(result));
+    if (result.success !== true) {
+      const err = new Error('Réponse MobCash ambiguë (ni succès ni erreur confirmés) : ' + JSON.stringify(result));
+      err.ambiguous = true;
+      throw err;
+    }
     return { ...result, amount: validatedAmount };
   });
 }
