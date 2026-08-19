@@ -19,15 +19,23 @@ export async function creditDepot(order, transferId) {
 
   await supabaseAdmin.from('depot_orders').update({ status: 'paiement_recu' }).eq('id', order.id);
 
-  if (!isMobcashConfigured()) {
-    await sendTelegramAdmin(`💰 Paiement Waafi confirmé — Dépôt #${order.id} (${order.montant} DJF → 1xBet ${order.id_bet1x}). Créditez manuellement puis confirmez sur le panneau admin.`);
+  const mobcashOn = isMobcashConfigured();
+  await sendTelegramAdmin(
+    `💳 Ordre paiement confirmé — Paiement Waafi validé\n\n` +
+    `Ordre: #${order.id} | ${order.montant} DJF\n` +
+    `Transfer-ID: ${transferId} | N°: ${order.numero_waafi_expediteur}\n` +
+    `WhatsApp: ${order.whatsapp || '—'}\n\n` +
+    (mobcashOn ? `⏳ MobCash va créditer le compte 1xBet...` : `⏳ Créditez manuellement puis confirmez sur le panneau admin...`)
+  );
+
+  if (!mobcashOn) {
     return { credited: false, manual: true };
   }
 
   try {
     await mobcashDeposit(order.id_bet1x, order.montant);
     await supabaseAdmin.from('depot_orders').update({ status: 'credite' }).eq('id', order.id);
-    await sendTelegramAdmin(`✅ Dépôt #${order.id} crédité automatiquement (${order.montant} DJF → ${order.id_bet1x})`);
+    await sendTelegramAdmin(`✅ Dépôt — Crédité avec succès\n#${order.id} — ${order.montant} DJF`);
     return { credited: true };
   } catch (mcErr) {
     await supabaseAdmin.from('alertes_etat').insert({ type: 'mobcash_credit_failed', order_id: order.id, collection: 'depot_orders' });

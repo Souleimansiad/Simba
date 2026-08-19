@@ -37,15 +37,22 @@ export default async function handler(req, res) {
       order_id: record.id,
     });
 
-    const lines = [
-      `🟢 <b>Nouveau dépôt</b> #${record.id}`,
-      `Montant: <b>${record.montant} DJF</b>`,
-      `ID 1xBet: ${record.id_bet1x}`,
-      `Waafi expéditeur: ${record.numero_waafi_expediteur}`,
-      `Transfer ID: ${record.transfer_id || '—'}`,
-      isFraud ? `⚠️ <b>FRAUDE SUSPECTÉE</b> (score ${score}): ${reasons.join(', ')}` : `Score fraude: ${score}`,
-    ];
-    await sendTelegramAdmin(lines.join('\n'));
+    if (isFraud) {
+      await sendTelegramAdmin(
+        `⚠️ <b>FRAUDE SUSPECTÉE</b> — Dépôt #${record.id}\n` +
+        `Montant: ${record.montant} DJF | ID 1xBet: ${record.id_bet1x}\n` +
+        `Score fraude ${score}: ${reasons.join(', ')}`
+      );
+    } else {
+      await sendTelegramAdmin(
+        `📥 Nouvel ordre Dépôt — #${record.id}\n\n` +
+        `Montant : ${record.montant} DJF\n` +
+        `ID 1xBet : ${record.id_bet1x}\n` +
+        `Transfer-ID : ${record.transfer_id || '—'}\n` +
+        `N° Waafi : ${record.numero_waafi_expediteur}\n\n` +
+        `⏳ Vérification en cours...`
+      );
+    }
     await notifyAgentsWhatsApp(`Nouveau dépôt #${record.id} — ${record.montant} DJF${isFraud ? ' (FRAUDE SUSPECTÉE)' : ''}`);
 
     // Le client paie souvent AVANT de remplir le formulaire : le SMS Waafi
