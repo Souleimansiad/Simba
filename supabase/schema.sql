@@ -12,16 +12,40 @@ create extension if not exists pgcrypto;
 -- 1. FONCTIONS UTILITAIRES
 -- =====================================================================
 
--- Génère une référence courte lisible (ex: D7F3A9, R2C8E1)
--- search_path inclut "extensions" : c'est le schéma où Supabase installe
--- pgcrypto (gen_random_bytes) par défaut.
+-- Compteur journalier par préfixe (D/R), remis à zéro chaque jour (heure
+-- de Djibouti). Verrouillé (RLS sans policy) : accessible uniquement via
+-- gen_order_ref(), jamais en direct par anon/authenticated.
+create table if not exists public.order_seq (
+  seq_day  date not null,
+  prefix   text not null,
+  counter  int  not null default 0,
+  primary key (seq_day, prefix)
+);
+alter table public.order_seq enable row level security;
+
+-- Génère une référence lisible {D|R}{MMDD}{compteur du jour} (ex: D08191,
+-- R08192) — compteur remis à zéro chaque jour, par préfixe.
 create or replace function public.gen_order_ref(p_prefix text)
 returns text
-language sql
+language plpgsql
+security definer
 set search_path = public, extensions
 as $$
-  select p_prefix || upper(substr(encode(gen_random_bytes(6), 'hex'), 1, 6));
+declare
+  v_day     date := (now() at time zone 'Africa/Djibouti')::date;
+  v_counter int;
+begin
+  insert into public.order_seq (seq_day, prefix, counter)
+  values (v_day, p_prefix, 1)
+  on conflict (seq_day, prefix) do update set counter = public.order_seq.counter + 1
+  returning counter into v_counter;
+
+  return p_prefix || to_char(v_day, 'MMDD') || v_counter::text;
+end;
 $$;
+
+revoke all on function public.gen_order_ref(text) from public;
+grant execute on function public.gen_order_ref(text) to service_role;
 
 -- Trigger générique : maintient updated_at à jour
 create or replace function public.set_updated_at()
