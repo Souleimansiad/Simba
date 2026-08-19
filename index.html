@@ -789,7 +789,7 @@ function renderDepot(app){
         </div>
         <div class="field">
           <label for="d-whatsapp">${t('depot.whatsapp')}</label>
-          <input type="tel" id="d-whatsapp" required>
+          <input type="tel" id="d-whatsapp" placeholder="77xxxxxx" required>
         </div>
         ${captchaHtml('captcha-depot')}
         <button type="submit" class="btn btn-primary btn-block" id="d-submit">${t('depot.submit')}</button>
@@ -867,7 +867,7 @@ function renderRetrait(app){
         </div>
         <div class="field">
           <label for="r-whatsapp">${t('retrait.whatsapp')}</label>
-          <input type="tel" id="r-whatsapp" required>
+          <input type="tel" id="r-whatsapp" placeholder="77xxxxxx" required>
         </div>
         ${captchaHtml('captcha-retrait')}
         <button type="submit" class="btn btn-primary btn-block" id="r-submit">${t('retrait.submit')}</button>

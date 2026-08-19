@@ -14,8 +14,15 @@ function greenApiUrl(method) {
   return `${GREENAPI_API_URL}/waInstance${GREENAPI_ID_INSTANCE}/${method}/${GREENAPI_API_TOKEN}`;
 }
 
+// Djibouti : les clients tapent leur numéro local à 8 chiffres (ex:
+// 77316343) sans l'indicatif pays — Green API exige le numéro complet
+// (25377316343), donc on préfixe automatiquement plutôt que de compter sur
+// chaque utilisateur pour le taper lui-même.
+const LOCAL_COUNTRY_CODE = '253';
+
 function toChatId(number) {
-  const digits = String(number || '').replace(/\D/g, '');
+  let digits = String(number || '').replace(/\D/g, '');
+  if (digits.length === 8) digits = LOCAL_COUNTRY_CODE + digits;
   return digits ? `${digits}@c.us` : null;
 }
 
