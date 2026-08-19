@@ -1560,6 +1560,12 @@ function renderAdminTestWa(main){
 
 /* ------------------------------ BOOT ------------------------------ */
 async function boot(){
+  // /admin (rewrite Vercel vers index.html, voir vercel.json) : lien
+  // simple à partager (simba-pay.com/admin) qui retombe sur le routeur à
+  // base de hash déjà en place, sans dupliquer sa logique.
+  if (location.pathname === '/admin' && !location.hash) {
+    history.replaceState(null, '', '/' + location.search + '#admin');
+  }
   checkCreatorBypass();
   document.documentElement.lang = currentLang;
   await refreshAuthState();
