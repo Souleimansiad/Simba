@@ -314,7 +314,8 @@ const CONFIG = {
   WAAFI_NAME: 'Souleiman Said Soubaneh',
   PROMO_CODE: 'Simba10M',
   AFFILIATE_LINK: 'https://refpa61797.com/L?tag=d_5565284m_45361c_&site=5565284&ad=45361',
-  MIN_AMOUNT: 500,
+  MIN_DEPOT_AMOUNT: 50,
+  MIN_RETRAIT_AMOUNT: 250,
   // TODO: renseigner les contacts support
   WHATSAPP_SUPPORT_URL: 'https://wa.me/25377583735',
   TELEGRAM_SUPPORT_URL: 'https://t.me/simba_support',
@@ -351,7 +352,9 @@ const KP_LANGS = {
     'retrait.step5':'Remplissez le formulaire ci-dessous avec ce code',
     'retrait.bet_id':'ID 1xBet', 'retrait.amount':'Montant à retirer (DJF)', 'retrait.waafi_reception':'Numéro Waafi de réception',
     'retrait.code':'Code retrait 1xBet', 'retrait.whatsapp':'WhatsApp (optionnel)', 'retrait.submit':'Soumettre le retrait',
-    'form.required':'Ce champ est requis', 'form.min_amount':'Montant minimum : 500 DJF',
+    'form.required':'Ce champ est requis',
+    'form.min_amount_depot':`Montant minimum : ${CONFIG.MIN_DEPOT_AMOUNT} DJF`,
+    'form.min_amount_retrait':`Montant minimum : ${CONFIG.MIN_RETRAIT_AMOUNT} DJF`,
     'form.transfer_min':'Doit contenir au moins 6 chiffres',
     'form.captcha_label':'Vérification anti-robot', 'form.captcha_wrong':'Réponse incorrecte, réessayez.',
     'suivi.title':'Suivi de votre ordre', 'suivi.status.en_attente':'En attente',
@@ -394,7 +397,9 @@ const KP_LANGS = {
     'retrait.step5':'Fill in the form below with that code',
     'retrait.bet_id':'1xBet ID', 'retrait.amount':'Amount to withdraw (DJF)', 'retrait.waafi_reception':'Receiving Waafi number',
     'retrait.code':'1xBet withdrawal code', 'retrait.whatsapp':'WhatsApp (optional)', 'retrait.submit':'Submit withdrawal',
-    'form.required':'This field is required', 'form.min_amount':'Minimum amount: 500 DJF',
+    'form.required':'This field is required',
+    'form.min_amount_depot':`Minimum amount: ${CONFIG.MIN_DEPOT_AMOUNT} DJF`,
+    'form.min_amount_retrait':`Minimum amount: ${CONFIG.MIN_RETRAIT_AMOUNT} DJF`,
     'form.transfer_min':'Must contain at least 6 digits',
     'form.captcha_label':'Anti-bot check', 'form.captcha_wrong':'Wrong answer, try again.',
     'suivi.title':'Track your order', 'suivi.status.en_attente':'Pending',
@@ -638,13 +643,13 @@ function renderHome(app){
 
   const faqData = currentLang === 'fr' ? [
     ['Combien de temps prend un dépôt ?', 'En général entre 1 et 5 minutes après réception du paiement Waafi.'],
-    ['Quel est le montant minimum ?', `Le montant minimum pour un dépôt ou un retrait est de ${CONFIG.MIN_AMOUNT} DJF.`],
+    ['Quel est le montant minimum ?', `Le montant minimum est de ${CONFIG.MIN_DEPOT_AMOUNT} DJF pour un dépôt et ${CONFIG.MIN_RETRAIT_AMOUNT} DJF pour un retrait.`],
     ['Comment suivre mon ordre ?', 'Après soumission, vous recevez un lien de suivi en temps réel (#suivi-XXXX).'],
     ['Le code promo est-il obligatoire ?', `Non, mais utiliser "${CONFIG.PROMO_CODE}" vous donne un bonus à l'inscription 1xBet.`],
     ['Que faire si mon transfert échoue ?', 'Contactez notre support WhatsApp ou Telegram avec votre référence d\'ordre.'],
   ] : [
     ['How long does a deposit take?', 'Usually between 1 and 5 minutes after the Waafi payment is received.'],
-    ['What is the minimum amount?', `The minimum amount for a deposit or withdrawal is ${CONFIG.MIN_AMOUNT} DJF.`],
+    ['What is the minimum amount?', `The minimum amount is ${CONFIG.MIN_DEPOT_AMOUNT} DJF for a deposit and ${CONFIG.MIN_RETRAIT_AMOUNT} DJF for a withdrawal.`],
     ['How do I track my order?', 'After submitting, you get a real-time tracking link (#suivi-XXXX).'],
     ['Is the promo code required?', `No, but using "${CONFIG.PROMO_CODE}" gives you a bonus on 1xBet signup.`],
     ['What if my transfer fails?', 'Contact our WhatsApp or Telegram support with your order reference.'],
@@ -721,8 +726,8 @@ function renderDepot(app){
       <form id="form-depot" class="card" novalidate>
         <div class="field">
           <label for="d-amount">${t('depot.amount')}</label>
-          <input type="number" id="d-amount" class="mono-input" min="${CONFIG.MIN_AMOUNT}" step="1" required>
-          <div class="hint">${t('form.min_amount')}</div>
+          <input type="number" id="d-amount" class="mono-input" min="${CONFIG.MIN_DEPOT_AMOUNT}" step="1" required>
+          <div class="hint">${t('form.min_amount_depot')}</div>
         </div>
         <div class="field">
           <label for="d-betid">${t('depot.bet_id')}</label>
@@ -760,7 +765,7 @@ function renderDepot(app){
     const transferId = document.getElementById('d-transfer').value.trim();
     const whatsapp = document.getElementById('d-whatsapp').value.trim();
 
-    if (!amount || amount < CONFIG.MIN_AMOUNT) return toast(t('form.min_amount'), 'error');
+    if (!amount || amount < CONFIG.MIN_DEPOT_AMOUNT) return toast(t('form.min_amount_depot'), 'error');
     if (!betId || !sender) return toast(t('form.required'), 'error');
     if (!checkCaptcha()) return toast(t('form.captcha_wrong'), 'error');
 
@@ -804,8 +809,8 @@ function renderRetrait(app){
         </div>
         <div class="field">
           <label for="r-amount">${t('retrait.amount')}</label>
-          <input type="number" id="r-amount" class="mono-input" min="${CONFIG.MIN_AMOUNT}" step="1" required>
-          <div class="hint">${t('form.min_amount')}</div>
+          <input type="number" id="r-amount" class="mono-input" min="${CONFIG.MIN_RETRAIT_AMOUNT}" step="1" required>
+          <div class="hint">${t('form.min_amount_retrait')}</div>
         </div>
         <div class="field">
           <label for="r-waafi">${t('retrait.waafi_reception')}</label>
@@ -835,7 +840,7 @@ function renderRetrait(app){
     const code = document.getElementById('r-code').value.trim();
     const whatsapp = document.getElementById('r-whatsapp').value.trim();
 
-    if (!amount || amount < CONFIG.MIN_AMOUNT) return toast(t('form.min_amount'), 'error');
+    if (!amount || amount < CONFIG.MIN_RETRAIT_AMOUNT) return toast(t('form.min_amount_retrait'), 'error');
     if (!betId || !waafi || !code) return toast(t('form.required'), 'error');
     if (!checkCaptcha()) return toast(t('form.captcha_wrong'), 'error');
 
