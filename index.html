@@ -387,7 +387,7 @@ const KP_LANGS = {
     'suivi.step1.title':'En attente de vérification', 'suivi.step2.title':'Paiement reçu — crédit 1xBet en cours',
     'suivi.step3.success':'Crédité avec succès', 'suivi.step3.failed':'Paiement non reçu',
     'suivi.progress':'Étape', 'suivi.cancel':'Annuler l\'ordre', 'suivi.cancel_confirm':'Annuler cet ordre ?',
-    'suivi.cancelled_ok':'Ordre annulé.', 'suivi.retry_msg':'Tentative échouée, nouvelle tentative en cours...',
+    'suivi.cancelled_ok':'Ordre annulé.',
     'suivi.invalid_account':'Compte 1xBet invalide — contactez le support',
     'suivi.reason':'Raison', 'suivi.need_help':'Besoin d\'aide ?',
     'suivi.detail.bet_id':'ID 1xBet', 'suivi.detail.waafi_depot':'Numéro Waafi expéditeur',
@@ -443,7 +443,7 @@ const KP_LANGS = {
     'suivi.step1.title':'Pending verification', 'suivi.step2.title':'Payment received — 1xBet credit in progress',
     'suivi.step3.success':'Successfully credited', 'suivi.step3.failed':'Payment not received',
     'suivi.progress':'Step', 'suivi.cancel':'Cancel order', 'suivi.cancel_confirm':'Cancel this order?',
-    'suivi.cancelled_ok':'Order cancelled.', 'suivi.retry_msg':'Attempt failed, retrying...',
+    'suivi.cancelled_ok':'Order cancelled.',
     'suivi.invalid_account':'Invalid 1xBet account — contact support',
     'suivi.reason':'Reason', 'suivi.need_help':'Need help?',
     'suivi.detail.bet_id':'1xBet ID', 'suivi.detail.waafi_depot':'Sender Waafi number',
@@ -1008,7 +1008,6 @@ function renderSuivi(app, orderId){
     const visual = suiviStateVisual(order);
     const showFailureBlock = (order.status === 'rejete' || order.status === 'fraude' || order.status === 'annule')
       || (order.status === 'paiement_recu' && order.mobcash_status === 'echec_permanent');
-    const showRetryMsg = order.status === 'paiement_recu' && order.mobcash_status === 'retry';
     const showCancel = order.status === 'en_attente';
 
     content.innerHTML = `
@@ -1021,7 +1020,6 @@ function renderSuivi(app, orderId){
       <div class="suivi-progress-label">${t('suivi.progress')} ${visual.step}/3</div>
       <div class="suivi-progress-bar"><div class="suivi-progress-fill ${visual.fillClass}" style="width:${(visual.step/3*100)}%"></div></div>
 
-      ${showRetryMsg ? `<div class="suivi-submsg">${t('suivi.retry_msg')}</div>` : ''}
       ${showFailureBlock && order.last_error ? `<div class="suivi-reason"><strong>${t('suivi.reason')}:</strong> ${/payerNickname/i.test(order.last_error) ? t('suivi.invalid_account') : order.last_error}</div>` : ''}
 
       ${timelineHtml(order.status)}

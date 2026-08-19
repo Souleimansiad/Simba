@@ -3,44 +3,32 @@ import { mobcashDeposit, isMobcashConfigured } from './mobcash.js';
 import { sendTelegramAdmin } from './telegram.js';
 import { sendWhatsApp } from './whatsapp.js';
 
-const MAX_ATTEMPTS = 3;
-const RETRY_DELAY_MS = 3000;
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 // Un échec de payerNickname (vérification de compte) signifie que l'ID
-// 1xBet lui-même est invalide — retenter ne changera rien, on classe ça en
-// échec permanent immédiat plutôt que de gaspiller 3 tentatives.
+// 1xBet lui-même est invalide.
 function isPermanentMobcashError(err) {
   return /payerNickname/i.test(err.message);
 }
 
+// UNE SEULE tentative, jamais de retry automatique : MobCash peut répondre
+// une erreur tout en ayant déjà réellement exécuté le dépôt côté argent
+// (constaté en test — 2 dépôts de 50 DJF réels dans l'historique MobCash
+// malgré 3 réponses d'erreur consécutives à nos appels). Retenter à
+// l'aveugle risque de créditer plusieurs fois le même dépôt. Tout échec
+// exige donc une vérification manuelle de l'historique MobCash avant toute
+// relance (bouton "Relancer" du panneau admin).
 async function attemptMobcashDeposit(order) {
-  let lastErr = null;
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    try {
-      await mobcashDeposit(order.id_bet1x, order.montant);
-      return { success: true, attempts: attempt };
-    } catch (err) {
-      lastErr = err;
-      const permanent = isPermanentMobcashError(err);
-      await supabaseAdmin.from('depot_orders').update({
-        mobcash_attempts: attempt,
-        mobcash_status: permanent ? 'echec_permanent' : 'retry',
-        last_error: err.message,
-      }).eq('id', order.id);
-
-      if (permanent) break;
-      if (attempt < MAX_ATTEMPTS) {
-        await sendTelegramAdmin(`⚠️ Tentative ${attempt}/${MAX_ATTEMPTS} échouée pour #${order.id} — nouvelle tentative...\n${err.message}`);
-        await sendWhatsApp(order.whatsapp, `⚠️ Simba — Tentative de crédit ${attempt}/${MAX_ATTEMPTS} échouée pour votre dépôt #${order.id}. Nouvelle tentative en cours...`);
-        await sleep(RETRY_DELAY_MS);
-      }
-    }
+  try {
+    await mobcashDeposit(order.id_bet1x, order.montant);
+    return { success: true, attempts: 1 };
+  } catch (err) {
+    const permanent = isPermanentMobcashError(err);
+    await supabaseAdmin.from('depot_orders').update({
+      mobcash_attempts: (order.mobcash_attempts || 0) + 1,
+      mobcash_status: 'echec_permanent',
+      last_error: err.message,
+    }).eq('id', order.id);
+    return { success: false, attempts: 1, error: err, permanent };
   }
-  return { success: false, attempts: MAX_ATTEMPTS, error: lastErr, permanent: isPermanentMobcashError(lastErr) };
 }
 
 async function finalizeCreditResult(order, result) {
@@ -55,21 +43,25 @@ async function finalizeCreditResult(order, result) {
     return { credited: true };
   }
 
-  // Échec définitif : l'ordre reste "paiement_recu" (le paiement Waafi est
-  // bien confirmé) avec mobcash_status="echec_permanent" — c'est le crédit
+  // Échec : l'ordre reste "paiement_recu" (le paiement Waafi est bien
+  // confirmé) avec mobcash_status="echec_permanent" — c'est le crédit
   // 1xBet qui nécessite une intervention manuelle, pas le paiement lui-même.
+  // AUCUNE relance automatique ici : MobCash peut répondre une erreur tout
+  // en ayant déjà exécuté le dépôt réel (constaté en test) — avant de
+  // relancer, l'admin doit vérifier l'historique MobCash du caissier pour
+  // confirmer qu'aucun dépôt n'a déjà été effectué.
   await supabaseAdmin.from('alertes_etat').insert({ type: 'mobcash_credit_failed', order_id: order.id, collection: 'depot_orders' });
-  const reasonLabel = result.permanent ? 'Compte 1xBet invalide' : `échec après ${result.attempts} tentatives`;
+  const reasonLabel = result.permanent ? 'Compte 1xBet invalide' : 'échec MobCash';
   await sendTelegramAdmin(
-    `❌ Échec définitif — Dépôt #${order.id}\n` +
+    `❌ Échec — Dépôt #${order.id}\n` +
     `Paiement Waafi confirmé mais crédit MobCash échoué (${reasonLabel}) : ${result.error.message}\n` +
-    `Intervention manuelle requise.`
+    `⚠️ Vérifier l'historique MobCash du caissier AVANT de relancer (le dépôt a pu être exécuté malgré cette erreur).`
   );
   await sendWhatsApp(
     order.whatsapp,
     result.permanent
       ? `❌ Simba — Compte 1xBet invalide pour votre dépôt #${order.id}. Contactez le support pour résoudre ça.`
-      : `❌ Simba — Le crédit de votre dépôt #${order.id} a échoué après plusieurs tentatives. Notre équipe va intervenir manuellement.`
+      : `❌ Simba — Le crédit de votre dépôt #${order.id} n'a pas pu être confirmé automatiquement. Notre équipe va vérifier et intervenir manuellement.`
   );
   return { credited: false, error: result.error.message, permanent: result.permanent };
 }
@@ -123,14 +115,6 @@ export async function creditDepot(order, transferId) {
     return { credited: false, manual: true };
   }
 
-  const result = await attemptMobcashDeposit(order);
-  return finalizeCreditResult(order, result);
-}
-
-// Relance automatique pour un ordre bloqué depuis longtemps en
-// paiement_recu/echec_permanent (voir ordres-bloques.js, relance auto >24h).
-// Réutilise le même cycle de 3 tentatives que le flux normal.
-export async function relaunchStaleCredit(order) {
   const result = await attemptMobcashDeposit(order);
   return finalizeCreditResult(order, result);
 }
