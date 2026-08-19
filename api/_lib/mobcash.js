@@ -137,7 +137,9 @@ async function mobileRpc(path, accessToken, params) {
       : (rawText.slice(0, 300) || ('MobCash HTTP ' + res.status));
     throw new Error(`MobCash ${path} échoué (${res.status}) : ${msg}`);
   }
-  return entry.result || {};
+  // rawText inclus pour diagnostic : si result.success est absent/faux, on
+  // veut voir la réponse brute réelle plutôt qu'un "{}" muet.
+  return { ...(entry.result || {}), _raw: rawText.slice(0, 300) };
 }
 
 export async function mobcashDeposit(payerID, montant) {
