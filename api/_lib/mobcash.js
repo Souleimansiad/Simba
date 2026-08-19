@@ -17,6 +17,20 @@ const MOBILE_BASE_URL = 'https://admin.mob-cash.com/api/v1/mobile';
 const SERVICE_NAME = 'mobcash';
 const FAILURE_THRESHOLD = 5;
 const OPEN_DURATION_MS = 5 * 60 * 1000;
+const REQUEST_TIMEOUT_MS = 20 * 1000;
+
+async function fetchWithTimeout(url, options) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (err) {
+    if (err.name === 'AbortError') throw new Error(`MobCash n'a pas répondu après ${REQUEST_TIMEOUT_MS / 1000}s`);
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 // Tant que les identifiants MobCash ne sont pas fournis, le crédit/retrait
 // 1xBet se fait manuellement (MacroDroid + Waafi). Dès que ces variables
@@ -84,7 +98,7 @@ async function callMobCash(fn) {
 // complexité de cache/rafraîchissement de token entre invocations
 // serverless (chaque appel est indépendant).
 async function mobcashLogin() {
-  const res = await fetch(LOGIN_URL, {
+  const res = await fetchWithTimeout(LOGIN_URL, {
     method: 'POST',
     headers: { Accept: 'application/json, text/plain, */*', 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -104,7 +118,7 @@ async function mobcashLogin() {
 }
 
 async function mobileRpc(path, accessToken, params) {
-  const res = await fetch(MOBILE_BASE_URL + path, {
+  const res = await fetchWithTimeout(MOBILE_BASE_URL + path, {
     method: 'POST',
     headers: {
       Accept: 'application/json, text/plain, */*',
