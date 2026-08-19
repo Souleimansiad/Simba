@@ -255,9 +255,14 @@ async function handleMobcashDebug(req, res) {
   }
 
   const LOGIN_URL = 'https://admin.mob-cash.com/api/v2/cashbox/login';
-  const cashboxCode = (process.env.MOBCASH_CASHBOX_CODE || '').trim();
-  const login = (process.env.MOBCASH_LOGIN || '').trim();
-  const password = (process.env.MOBCASH_PASSWORD || '').trim();
+  // Permet de tester un autre trio d'identifiants (?test_cashboxCode=...&
+  // test_login=...&test_password=...) sans toucher aux variables d'env
+  // Vercel — utile pour comparer plusieurs caisses sans reconfigurer/
+  // redéployer entre chaque essai.
+  const usingOverride = req.query.test_login != null;
+  const cashboxCode = (req.query.test_cashboxCode || process.env.MOBCASH_CASHBOX_CODE || '').trim();
+  const login = (req.query.test_login || process.env.MOBCASH_LOGIN || '').trim();
+  const password = (req.query.test_password || process.env.MOBCASH_PASSWORD || '').trim();
 
   async function attempt(label, body, extraHeaders) {
     const started = Date.now();
@@ -284,6 +289,12 @@ async function handleMobcashDebug(req, res) {
 
   const results = [];
   results.push(await attempt('number-cashboxCode', { cashboxCode: Number(cashboxCode), login, password }));
+  if (usingOverride) {
+    return res.status(200).json({
+      diagnostics: { cashboxCode_length: cashboxCode.length, login_value: login, login_length: login.length, password_length: password.length },
+      results,
+    });
+  }
   results.push(await attempt('string-cashboxCode', { cashboxCode, login, password }));
   results.push(await attempt('with-browser-ua', { cashboxCode: Number(cashboxCode), login, password }, {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
