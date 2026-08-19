@@ -142,31 +142,23 @@ async function mobileRpc(path, accessToken, params) {
   return { ...(entry.result || {}), _raw: rawText.slice(0, 300) };
 }
 
-// entry.error (voir mobileRpc) est le signal d'échec fiable côté protocole
-// JSON-RPC. result.success est une confirmation explicite quand elle est
-// présente, mais MobCash renvoie parfois result:{} (ni error, ni success) —
-// constaté en test réel : deux dépôts dans ce cas précis ont en fait été
-// exécutés (visibles dans l'historique MobCash) alors que ce code les
-// signalait comme "refusés". On distingue donc explicitement ce troisième
-// cas (ambiguous) d'un vrai refus, pour ne plus affirmer un échec qui n'en
-// est peut-être pas un.
+// entry.error (voir mobileRpc) est le signal d'échec confirmé côté
+// protocole JSON-RPC : mobileRpc lève déjà une exception dans ce cas.
+// MobCash ne renvoie PAS de champ result.success sur /deposit — confirmé
+// deux fois en conditions réelles : result:{} (vide, sans error) correspond
+// à un dépôt réellement exécuté (visible dans l'historique du caissier),
+// jamais à un échec. On ne fait donc plus dépendre le succès d'un champ
+// que MobCash n'envoie jamais sur cet endpoint : l'absence d'erreur suffit.
 export async function mobcashDeposit(payerID, montant) {
   return callMobCash(async () => {
     const { sessionID, userID, accessToken } = await mobcashLogin();
     // Vérification du compte obligatoire avant dépôt.
     await mobileRpc('/payerNickname', accessToken, { payerID, sessionID, userID });
-    const result = await mobileRpc('/deposit', accessToken, {
+    return mobileRpc('/deposit', accessToken, {
       deposit: { amount: String(montant), payerID },
       sessionID,
       userID,
     });
-    if (result.success === false) throw new Error('Dépôt MobCash refusé : ' + JSON.stringify(result));
-    if (result.success !== true) {
-      const err = new Error('Réponse MobCash ambiguë (ni succès ni erreur confirmés) : ' + JSON.stringify(result));
-      err.ambiguous = true;
-      throw err;
-    }
-    return result;
   });
 }
 
@@ -191,6 +183,12 @@ export async function mobcashPayout(payerID, withdrawalCode, montant) {
       userID,
       withdraw: { amount: validatedAmount, payerID, withdrawalCode },
     });
+    // Contrairement à /deposit (voir mobcashDeposit ci-dessus), on n'a PAS
+    // encore de confirmation réelle du comportement de /withdrawal en cas
+    // de result:{} vide. Un faux "réussi" ici dirait au client qu'il a été
+    // payé sur Waafi alors que ce n'est peut-être pas le cas — plus grave
+    // qu'une fausse alerte d'échec — donc on reste prudent : seul
+    // result.success === true est traité comme un succès confirmé.
     if (result.success === false) throw new Error('Retrait MobCash refusé : ' + JSON.stringify(result));
     if (result.success !== true) {
       const err = new Error('Réponse MobCash ambiguë (ni succès ni erreur confirmés) : ' + JSON.stringify(result));
