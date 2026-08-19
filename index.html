@@ -249,6 +249,7 @@ footer.site{border-top:1px solid var(--card-border); padding:28px 0; text-align:
 .suivi-submsg{margin-top:10px; font-size:.85rem; color:var(--text-dim); text-align:left;}
 .suivi-submsg.failed{color:var(--danger);}
 .suivi-reason{margin-top:6px; font-size:.85rem; text-align:left; padding:10px 12px; border-radius:10px; background:rgba(239,68,68,.1); color:var(--danger);}
+.suivi-reason.warning{background:rgba(245,158,11,.12); color:var(--warning);}
 .suivi-actions{margin-top:18px; display:flex; gap:10px; flex-wrap:wrap;}
 @media (prefers-reduced-motion:no-preference){
   .t-dot-pulse{animation:pulse-dot 1.4s ease-in-out infinite;}
@@ -1019,7 +1020,14 @@ function renderSuivi(app, orderId){
     const visual = suiviStateVisual(order);
     const showFailureBlock = (order.status === 'rejete' || order.status === 'fraude' || order.status === 'annule')
       || (order.status === 'paiement_recu' && order.mobcash_status === 'echec_permanent');
+    // Le paiement Waafi reçu ne correspondait pas exactement à l'ordre
+    // (montant ou numéro expéditeur différent) : l'ordre reste en_attente
+    // (pas rejeté, en attente de vérification manuelle) mais le client doit
+    // en être informé au lieu de voir "en attente" sans explication.
+    const showMismatchWarning = order.status === 'en_attente' && !!order.last_error;
+    const showReasonBox = (showFailureBlock || showMismatchWarning) && order.last_error;
     const showCancel = order.status === 'en_attente';
+    const showSupport = showFailureBlock || showMismatchWarning;
 
     content.innerHTML = `
       <div class="suivi-state-icon ${visual.iconClass}">${visual.icon}</div>
@@ -1031,7 +1039,7 @@ function renderSuivi(app, orderId){
       <div class="suivi-progress-label">${t('suivi.progress')} ${visual.step}/3</div>
       <div class="suivi-progress-bar"><div class="suivi-progress-fill ${visual.fillClass}" style="width:${(visual.step/3*100)}%"></div></div>
 
-      ${showFailureBlock && order.last_error ? `<div class="suivi-reason"><strong>${t('suivi.reason')}:</strong> ${/payerNickname/i.test(order.last_error) ? t('suivi.invalid_account') : order.last_error}</div>` : ''}
+      ${showReasonBox ? `<div class="suivi-reason ${showFailureBlock ? '' : 'warning'}"><strong>${t('suivi.reason')}:</strong> ${/payerNickname/i.test(order.last_error) ? t('suivi.invalid_account') : order.last_error}</div>` : ''}
 
       ${timelineHtml(order.status)}
 
@@ -1044,10 +1052,10 @@ function renderSuivi(app, orderId){
         `).join('')}
       </div>
 
-      ${showCancel || showFailureBlock ? `
+      ${showCancel || showSupport ? `
         <div class="suivi-actions">
           ${showCancel ? `<button class="btn btn-outline" id="suivi-cancel-btn">${icon('x', 16)} ${t('suivi.cancel')}</button>` : ''}
-          ${showFailureBlock ? `
+          ${showSupport ? `
             <a class="btn btn-outline" href="${CONFIG.WHATSAPP_SUPPORT_URL}" target="_blank" rel="noopener">${icon('message', 16)} WhatsApp</a>
             <a class="btn btn-outline" href="${CONFIG.TELEGRAM_SUPPORT_URL}" target="_blank" rel="noopener">${icon('send', 16)} Telegram</a>
           ` : ''}

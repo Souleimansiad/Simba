@@ -124,14 +124,26 @@ export async function creditDepot(order, transferId) {
 // Le SMS existe (Transfer ID trouvé) mais montant et/ou expéditeur ne
 // correspondent pas à l'ordre déclaré — ne crédite pas, alerte un agent
 // pour vérification manuelle au lieu de rejeter ou créditer en aveugle.
+// Le client voyait avant ça uniquement "en attente" sans explication (la
+// raison n'existait que dans l'alerte Telegram admin) — on l'enregistre
+// maintenant sur l'ordre (visible sur la page de suivi) et on prévient le
+// client par WhatsApp, avec la raison précise pour qu'il puisse corriger
+// lui-même une erreur de saisie si c'en est une.
 export async function flagMismatch(order, reasons) {
+  const reasonText = reasons.join(' ; ');
+  await supabaseAdmin.from('depot_orders').update({ last_error: reasonText }).eq('id', order.id);
   await supabaseAdmin.from('alertes_etat').insert({
     type: 'depot_sms_mismatch',
     order_id: order.id,
     collection: 'depot_orders',
   });
   await sendTelegramAdmin(
-    `⚠️ Dépôt #${order.id} — paiement NON confirmé automatiquement (${reasons.join(' ; ')}). Vérification manuelle requise avant de créditer.`
+    `⚠️ Dépôt #${order.id} — paiement NON confirmé automatiquement (${reasonText}). Vérification manuelle requise avant de créditer.`
+  );
+  await sendWhatsApp(
+    order.whatsapp,
+    `⚠️ Simba — Votre dépôt #${order.id} n'a pas pu être vérifié automatiquement : ${reasonText}. ` +
+    `Notre équipe va vérifier manuellement. Si vous pensez qu'il y a une erreur de votre côté, contactez le support avec votre référence.`
   );
 }
 

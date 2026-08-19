@@ -1,7 +1,7 @@
 import { supabaseAdmin } from '../_lib/supabase.js';
 import { computeFraudScore } from '../_lib/fraud.js';
 import { sendTelegramAdmin } from '../_lib/telegram.js';
-import { notifyAgentsWhatsApp } from '../_lib/whatsapp.js';
+import { notifyAgentsWhatsApp, sendWhatsApp } from '../_lib/whatsapp.js';
 
 // Database Webhook Supabase : INSERT on public.retrait_orders
 export default async function handler(req, res) {
@@ -42,6 +42,16 @@ export default async function handler(req, res) {
     ];
     await sendTelegramAdmin(lines.join('\n'));
     await notifyAgentsWhatsApp(`Nouveau retrait #${record.id} — ${record.montant} DJF${isFraud ? ' (FRAUDE SUSPECTÉE)' : ''}`);
+
+    // Parité avec hooks/depot-created.js : le client doit aussi voir la
+    // confirmation de sa soumission, pas seulement l'équipe admin.
+    if (!isFraud && record.whatsapp) {
+      await sendWhatsApp(
+        record.whatsapp,
+        `✅ Simba — Votre retrait #${record.id} de ${record.montant} DJF est enregistré.\n` +
+        `Vérification en cours...`
+      );
+    }
 
     return res.status(200).json({ ok: true, fraud_score: score, is_fraud: isFraud });
   } catch (err) {

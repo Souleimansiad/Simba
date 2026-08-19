@@ -152,8 +152,19 @@ async function handleActionOrdre(req, res) {
         else await mobcashPayout(order.id_bet1x, order.code_retrait_1x, order.montant);
         await supabaseAdmin.from(table).update({ status: 'credite' }).eq('id', order_id);
       } catch (mcErr) {
+        // Sans ceci, l'ordre reste "paiement_recu" avec mobcash_status
+        // toujours null : le client voit un spinner infini sur la page de
+        // suivi, sans aucune indication d'échec (visible seulement dans
+        // l'alerte Telegram admin).
+        await supabaseAdmin.from(table).update({ mobcash_status: 'echec_permanent', last_error: mcErr.message }).eq('id', order_id);
         await supabaseAdmin.from('alertes_etat').insert({ type: 'mobcash_credit_failed', order_id, collection: table });
         await sendTelegramAdmin(`❌ Confirmation manuelle #${order_id} : échec MobCash — ${mcErr.message}`);
+        if (order.whatsapp) {
+          await sendWhatsApp(
+            order.whatsapp,
+            `❌ Simba — Le crédit de votre ordre #${order_id} n'a pas pu être confirmé automatiquement. Notre équipe va vérifier et intervenir manuellement.`
+          );
+        }
         return res.status(502).json({ error: 'Confirmation enregistrée mais crédit MobCash a échoué: ' + mcErr.message });
       }
     }
@@ -193,6 +204,12 @@ async function handleRetryDeposit(req, res) {
   } catch (mcErr) {
     await supabaseAdmin.from('depot_orders').update({ id_bet1x: idBet1x, last_error: mcErr.message }).eq('id', order_id);
     await sendTelegramAdmin(`❌ Relance manuelle #${order_id} toujours en échec (ID 1xBet ${idBet1x}) : ${mcErr.message}`);
+    if (order.whatsapp) {
+      await sendWhatsApp(
+        order.whatsapp,
+        `❌ Simba — La relance de votre dépôt #${order_id} a de nouveau échoué. Notre équipe reste sur le dossier.`
+      );
+    }
     return res.status(502).json({ error: 'Relance échouée : ' + mcErr.message });
   }
 
