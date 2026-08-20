@@ -812,13 +812,25 @@ function renderDepot(app){
   document.getElementById('copy-waafi-number').addEventListener('click', () => {
     navigator.clipboard.writeText(CONFIG.WAAFI_NUMBER).then(() => toast(currentLang==='fr' ? 'Numéro copié' : 'Number copied', 'success'));
   });
+  // Nettoie en direct un copier-coller depuis l'app Waafi qui inclut plus
+  // que le Transfer-ID (ex: "91156840, Solde: 1 234.5 DJF") — l'utilisateur
+  // voit ainsi exactement ce qui sera soumis, pas une valeur nettoyée en
+  // silence seulement à l'envoi.
+  document.getElementById('d-transfer').addEventListener('input', (e) => {
+    const clean = e.target.value.replace(/[^A-Za-z0-9]/g, '');
+    if (clean !== e.target.value) e.target.value = clean;
+  });
 
   document.getElementById('form-depot').addEventListener('submit', async (e) => {
     e.preventDefault();
     const amount = Number(document.getElementById('d-amount').value);
     const betId = document.getElementById('d-betid').value.trim();
     const sender = document.getElementById('d-sender').value.trim();
-    const transferId = document.getElementById('d-transfer').value.trim();
+    // Les clients copient parfois plus que l'ID depuis l'app Waafi (ex:
+    // "91156840,solde") — ça empêche toute correspondance avec le SMS reçu
+    // puisque la comparaison est exacte. On ne garde que les caractères
+    // alphanumériques (format réel des Transfer-ID Waafi).
+    const transferId = document.getElementById('d-transfer').value.trim().replace(/[^A-Za-z0-9]/g, '');
     const whatsapp = document.getElementById('d-whatsapp').value.trim();
 
     if (!amount || amount < CONFIG.MIN_DEPOT_AMOUNT) return toast(t('form.min_amount_depot'), 'error');
