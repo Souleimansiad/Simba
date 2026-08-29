@@ -509,7 +509,7 @@ function setTheme(theme){
   document.documentElement.setAttribute('data-theme', theme);
   localStorage.setItem('simba_theme', theme);
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', theme === 'dark' ? '#07101E' : '#F0F9FF');
+  if (meta) meta.setAttribute('content', theme === 'dark' ? '#07101E' : '#EAF6FF');
 }
 setTheme(localStorage.getItem('simba_theme') || 'light');
 
