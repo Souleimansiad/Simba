@@ -71,9 +71,14 @@ header.site{
   border-bottom:1px solid var(--card-border);
 }
 .header-inner{display:flex; align-items:center; justify-content:space-between; padding:14px 20px; max-width:1080px; margin:0 auto; gap:12px;}
-.logo{display:flex; align-items:center; gap:10px; font-family:var(--font-title); font-weight:800; font-size:1.25rem;}
-.logo-mark{width:34px; height:34px; border-radius:10px; object-fit:cover; box-shadow:var(--glow);}
-.tagline-small{font-size:.72rem; color:var(--text-dim); font-weight:500; display:block; margin-top:-2px;}
+.logo{display:flex; align-items:center; gap:12px; font-family:var(--font-title); font-weight:800; font-size:1.65rem;}
+.logo-mark{width:50px; height:50px; border-radius:13px; object-fit:cover; box-shadow:var(--glow);}
+.brand-pay{color:var(--primary);}
+.tagline-small{font-size:.76rem; color:var(--text-dim); font-weight:500; display:block; margin-top:-2px;}
+@media (max-width:480px){
+  .logo{font-size:1.35rem; gap:9px;}
+  .logo-mark{width:40px; height:40px; border-radius:11px;}
+}
 .header-actions{display:flex; align-items:center; gap:8px;}
 .icon-btn{
   width:38px; height:38px; border-radius:10px; border:1px solid var(--card-border);
@@ -612,8 +617,8 @@ function headerHtml(showBack, backHash){
         <a class="back-btn" href="${backHash || '#/'}" aria-label="${t('back')}">${icon('arrowLeft', 18)}</a>
       ` : `
         <a href="#/" class="logo" style="text-decoration:none;">
-          <img src="/logo.jpg" alt="Simba" class="logo-mark">
-          <span>Simba<span class="tagline-small">Waafi ⇄ 1xBet</span></span>
+          <img src="/logo.jpg" alt="Simba-Pay" class="logo-mark">
+          <span>Simba<span class="brand-pay">-Pay</span><span class="tagline-small">Waafi ⇄ 1xBet</span></span>
         </a>
       `}
       <div class="header-actions">
