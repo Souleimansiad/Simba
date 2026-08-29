@@ -757,18 +757,13 @@ function renderHome(app){
           </div>
           <a class="btn btn-primary" href="${CONFIG.AFFILIATE_LINK}" target="_blank" rel="noopener">${t('hero.cta')}</a>
         </div>
-        <div class="card action-card">
-          <div class="action-grid">
-            <a href="#depot" class="action-tile tile-depot">
-              <div class="tile-title">${t('tile.depot.title')}</div>
-            </a>
-            <a href="#retrait" class="action-tile tile-retrait">
-              <div class="tile-title">${t('tile.retrait.title')}</div>
-            </a>
-          </div>
-        </div>
       </div>
     </section>
+
+    <div class="container form-page">
+      ${formTabsHtml('depot')}
+      ${depotContentHtml()}
+    </div>
 
     <section class="container">
       <div class="section-title">
@@ -795,6 +790,7 @@ function renderHome(app){
     </footer>
   `;
   bindHeaderEvents();
+  bindDepotForm(app);
 
   document.getElementById('copy-promo').addEventListener('click', () => {
     navigator.clipboard.writeText(CONFIG.PROMO_CODE).then(() => toast(currentLang==='fr' ? 'Code copié' : 'Code copied', 'success'));
@@ -882,11 +878,8 @@ function mountCaptcha(id){
 }
 
 /* ------------------------------ DEPOT PAGE ------------------------------ */
-function renderDepot(app){
-  app.innerHTML = `
-    ${headerHtml(true, '#/')}
-    <div class="container form-page">
-      ${formTabsHtml('depot')}
+function depotContentHtml(){
+  return `
       <div class="page-header"><h1>💰 ${t('depot.title')}</h1></div>
       <p class="page-subtitle">${t('depot.subtitle')}</p>
 
@@ -964,9 +957,9 @@ function renderDepot(app){
         ${captchaHtml('captcha-depot')}
         <button type="submit" class="btn btn-primary btn-block" id="d-submit">⚡ ${t('depot.submit')}</button>
       </form>
-    </div>
   `;
-  bindHeaderEvents();
+}
+function bindDepotForm(app){
   bindPasteButtons(app);
   const checkCaptcha = mountCaptcha('captcha-depot');
   document.getElementById('copy-waafi-number').addEventListener('click', () => {
@@ -1012,6 +1005,17 @@ function renderDepot(app){
       btn.disabled = false; btn.textContent = t('depot.submit');
     }
   });
+}
+function renderDepot(app){
+  app.innerHTML = `
+    ${headerHtml(true, '#/')}
+    <div class="container form-page">
+      ${formTabsHtml('depot')}
+      ${depotContentHtml()}
+    </div>
+  `;
+  bindHeaderEvents();
+  bindDepotForm(app);
 }
 
 /* ------------------------------ RETRAIT PAGE ------------------------------ */
