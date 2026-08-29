@@ -70,16 +70,18 @@ header.site{
   background:color-mix(in srgb, var(--bg) 78%, transparent);
   border-bottom:1px solid var(--card-border);
 }
-.header-inner{display:flex; align-items:center; justify-content:space-between; padding:14px 20px; max-width:1080px; margin:0 auto; gap:12px;}
-.logo{display:flex; align-items:center; gap:13px; font-family:var(--font-title); font-weight:800; font-size:1.8rem;}
-.logo-mark{width:68px; height:68px; border-radius:16px; object-fit:cover; box-shadow:var(--glow);}
+.header-inner{display:flex; align-items:center; justify-content:space-between; padding:14px 20px; max-width:1080px; margin:0 auto; gap:10px; flex-wrap:nowrap;}
+.logo{display:flex; align-items:center; gap:13px; font-family:var(--font-title); font-weight:800; font-size:clamp(1.15rem, 4.6vw, 1.8rem); min-width:0; flex-shrink:1;}
+.logo-mark{width:68px; height:68px; border-radius:16px; object-fit:cover; box-shadow:var(--glow); flex-shrink:0;}
+.brand-name{white-space:nowrap;}
 .brand-pay{color:var(--primary);}
-.tagline-small{font-size:.8rem; color:var(--text-dim); font-weight:500; display:block; margin-top:-2px;}
+.tagline-small{font-size:.8rem; color:var(--text-dim); font-weight:500; display:block; margin-top:-2px; white-space:nowrap;}
 @media (max-width:480px){
-  .logo{font-size:1.45rem; gap:10px;}
+  .logo{gap:10px;}
   .logo-mark{width:56px; height:56px; border-radius:14px;}
+  .tagline-small{font-size:.68rem;}
 }
-.header-actions{display:flex; align-items:center; gap:8px;}
+.header-actions{display:flex; align-items:center; gap:8px; flex-shrink:0;}
 .icon-btn{
   width:38px; height:38px; border-radius:10px; border:1px solid var(--card-border);
   background:var(--card-bg); color:var(--text); display:flex; align-items:center; justify-content:center;
@@ -618,7 +620,10 @@ function headerHtml(showBack, backHash){
       ` : `
         <a href="#/" class="logo" style="text-decoration:none;">
           <img src="/logo.jpg" alt="Simba-Pay" class="logo-mark">
-          <span>Simba<span class="brand-pay">-Pay</span><span class="tagline-small">Waafi ⇄ 1xBet</span></span>
+          <span>
+            <span class="brand-name">Simba<span class="brand-pay">-Pay</span></span>
+            <span class="tagline-small">Waafi ⇄ 1xBet</span>
+          </span>
         </a>
       `}
       <div class="header-actions">
