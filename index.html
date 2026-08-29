@@ -169,7 +169,13 @@ header.site{
 .hero h1 span{background:linear-gradient(135deg,var(--primary),#0284C7); -webkit-background-clip:text; background-clip:text; color:transparent;}
 html[data-theme="dark"] .hero h1 span{background:linear-gradient(135deg,var(--primary),#BAE6FD); -webkit-background-clip:text; background-clip:text; color:transparent;}
 .hero p.sub{color:var(--text-dim); font-size:1.05rem; margin-bottom:22px;}
-.promo-row{display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap; margin-bottom:26px;}
+.hero-title-card{background:var(--card-bg); border:1px solid var(--card-border); border-radius:var(--radius-m); box-shadow:var(--shadow); padding:16px 20px; margin-bottom:16px;}
+.hero-title-card p.sub{margin-bottom:0;}
+.promo-row{
+  display:flex; align-items:center; justify-content:center; gap:12px; flex-wrap:wrap; margin-bottom:20px;
+  background:var(--card-bg); border:1px solid var(--card-border); border-radius:var(--radius-m); box-shadow:var(--shadow);
+  padding:14px 18px;
+}
 .promo-code{
   display:flex; align-items:center; gap:8px; background:var(--card-bg); border:1px solid var(--card-border);
   border-radius:999px; padding:6px 6px 6px 16px; box-shadow:var(--shadow);
@@ -747,8 +753,10 @@ function renderHome(app){
       <div class="hero-bg"><div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div></div>
       <div class="container hero-content">
         <span class="eyebrow">${icon('bolt', 13)} ${t('hero.eyebrow')}</span>
-        <h1>${t('hero.title1')} <span>${t('hero.title2')}</span></h1>
-        <p class="sub">${t('hero.sub')}</p>
+        <div class="hero-title-card">
+          <h1>${t('hero.title1')} <span>${t('hero.title2')}</span></h1>
+          <p class="sub">${t('hero.sub')}</p>
+        </div>
         <div class="promo-row">
           <div class="promo-code">
             <span class="promo-label">${t('hero.promo')}</span>
