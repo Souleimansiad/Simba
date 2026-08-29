@@ -1,7 +1,7 @@
 {
-  "name": "Simba — Dépôt 1xBet via Waafi",
+  "name": "Simba — Dépôt & Retrait 1xBet via Waafi",
   "short_name": "Simba",
-  "description": "Dépôt rapide et sécurisé de Waafi vers 1xBet, en quelques minutes.",
+  "description": "Échange rapide et sécurisé entre Waafi et 1xBet : dépôt et retrait en quelques minutes.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
