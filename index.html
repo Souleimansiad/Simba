@@ -246,13 +246,35 @@ footer.site{border-top:1px solid var(--card-border); padding:28px 0; text-align:
 /* ============================= FORM PAGES ============================= */
 .page-header{display:flex; align-items:center; gap:14px; padding:18px 0 6px;}
 .back-btn{width:38px; height:38px; border-radius:10px; background:var(--card-bg); border:1px solid var(--card-border); display:flex; align-items:center; justify-content:center; text-decoration:none; color:var(--text); font-size:1.1rem;}
-.page-header h1{font-size:1.4rem;}
+.page-header h1{font-size:1.4rem; display:flex; align-items:center; gap:10px;}
+.page-subtitle{color:var(--text-dim); font-size:.88rem; margin:-4px 0 18px 2px;}
 .form-page{max-width:560px; margin:0 auto; padding-bottom:60px;}
 .form-page .card{animation:fadeInUp .5s var(--ease-out) both;}
 .form-page form.card{animation-delay:.08s;}
 .info-box{display:flex; justify-content:space-between; align-items:center; background:var(--card-bg); border:1px solid var(--card-border); border-radius:var(--radius-m); padding:16px 18px; margin-bottom:18px;}
 .info-box .label{font-size:.72rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:.04em;}
 .info-box .value{font-family:var(--font-mono); font-weight:700; font-size:1.15rem; color:var(--primary-2);}
+
+/* Payment box (envoyez d'abord votre paiement à) */
+.payment-box{border-color:var(--primary); background:linear-gradient(160deg, rgba(56,189,248,.07) 0%, var(--card-bg-solid) 65%);}
+.payment-box-title{display:flex; align-items:center; gap:6px; font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--primary-2); margin-bottom:12px;}
+.payment-row{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 0;}
+.payment-row + .payment-row{border-top:1px solid var(--card-border);}
+.payment-row-label{display:flex; align-items:center; gap:6px; font-size:.82rem; color:var(--text-dim);}
+.payment-row-value{display:flex; align-items:center; gap:6px; font-weight:700; font-size:1.05rem; color:var(--primary-2); font-family:var(--font-mono);}
+.btn-copy-inline{background:none; border:none; color:var(--text-dim); width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:color .15s ease, background .15s ease;}
+.btn-copy-inline:hover{color:var(--primary); background:var(--bg-alt);}
+
+/* Payment method display */
+.method-card{display:flex; align-items:center; gap:12px; padding:12px 14px; border:1.5px solid var(--card-border); border-radius:var(--radius-m); background:var(--bg-alt); margin-bottom:18px;}
+.method-icon{width:38px; height:38px; border-radius:10px; background:var(--card-bg-solid); display:flex; align-items:center; justify-content:center; color:var(--primary); flex-shrink:0;}
+.method-title{font-weight:700; font-size:.92rem;}
+.method-sub{font-size:.74rem; color:var(--text-dim);}
+
+/* Field with inline action (paste button) */
+.field-with-action{display:flex; gap:8px; align-items:stretch;}
+.field-with-action input{flex:1; min-width:0;}
+.field-with-action .btn{flex-shrink:0; white-space:nowrap; padding:0 14px;}
 .field{margin-bottom:16px;}
 .field label{display:block; font-size:.66rem; font-weight:600; letter-spacing:.5px; text-transform:uppercase; margin-bottom:6px; color:var(--text-dim);}
 .field .hint{font-size:.72rem; color:var(--text-faint); margin-top:5px;}
@@ -272,12 +294,9 @@ footer.site{border-top:1px solid var(--card-border); padding:28px 0; text-align:
 .steps{list-style:none; counter-reset:step; margin-bottom:20px;}
 .steps li{counter-increment:step; display:flex; gap:12px; padding:10px 0; font-size:.9rem; color:var(--text-dim);}
 .steps li::before{content:counter(step); flex:0 0 auto; width:26px; height:26px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-size:.78rem; font-weight:700;}
-.captcha-row{display:flex; align-items:center; gap:10px;}
-.captcha-question{
-  background:var(--input-bg); border:1.5px solid var(--card-border); border-radius:var(--radius-s);
-  padding:13px 16px; font-weight:700; font-size:1rem; color:var(--text); white-space:nowrap;
-}
-.captcha-input{max-width:110px;}
+.captcha-box{display:flex; align-items:center; justify-content:space-between; gap:12px; border:1.5px solid var(--card-border); background:var(--bg-alt); border-radius:var(--radius-m); padding:14px 16px; margin-bottom:16px;}
+.captcha-text{font-weight:700; font-size:.9rem; color:var(--primary-2);}
+.captcha-input{max-width:70px; text-align:center; flex-shrink:0;}
 
 /* ============================= SUIVI / TIMELINE ============================= */
 .suivi-card{max-width:560px; margin:40px auto; text-align:center; animation:fadeInUp .55s var(--ease-out) both;}
@@ -422,10 +441,14 @@ const KP_LANGS = {
     'faq.title':'Questions fréquentes', 'faq.sub':'Tout ce qu\'il faut savoir avant de commencer',
     'support.title':'Besoin d\'aide ?', 'support.sub':'Notre équipe répond rapidement',
     'back':'Retour',
-    'depot.title':'Dépôt vers 1xBet', 'depot.waafi_number':'Numéro Waafi de réception', 'depot.waafi_name':'Nom du compte',
+    'depot.title':'Dépôt vers 1xBet', 'depot.subtitle':'Rechargez votre compte 1xBet via Waafi',
+    'depot.send_first':"Envoyez d'abord votre paiement à :",
+    'depot.waafi_number':'Numéro Waafi de réception', 'depot.waafi_name':'Nom du compte',
+    'depot.payment_method_name':'Waafi', 'depot.payment_instant':'Paiement instantané',
     'depot.amount':'Montant (DJF)', 'depot.bet_id':'ID 1xBet (compte à recharger)',
-    'depot.sender_number':'Votre numéro Waafi (expéditeur)', 'depot.transfer_id':'Transfer ID Waafi (preuve de paiement)',
-    'depot.whatsapp':'Numéro WhatsApp', 'depot.submit':'Soumettre le dépôt',
+    'depot.sender_number':'Votre numéro Waafi (expéditeur)', 'depot.sender_hint':'8 chiffres · commence par 77',
+    'depot.transfer_id':'Transfer ID Waafi (preuve de paiement)',
+    'depot.whatsapp':'Numéro WhatsApp', 'depot.whatsapp_hint':'Pour vous contacter · obligatoire', 'depot.submit':'Soumettre le dépôt',
     'depot.steps.title':'Comment envoyer votre paiement Waafi',
     'depot.step1':'Ouvrez votre application Waafi (ou composez le code USSD de votre opérateur)',
     'depot.step2':'Choisissez « Envoyer de l\'argent » / Transfert',
@@ -443,7 +466,9 @@ const KP_LANGS = {
     'form.min_amount_depot':`Montant minimum : ${CONFIG.MIN_DEPOT_AMOUNT} DJF`,
     'form.min_amount_retrait':`Montant minimum : ${CONFIG.MIN_RETRAIT_AMOUNT} DJF`,
     'form.transfer_min':'Doit contenir au moins 6 chiffres',
-    'form.captcha_label':'Vérification anti-robot', 'form.captcha_wrong':'Réponse incorrecte, réessayez.',
+    'form.captcha_label':'Vérification', 'form.captcha_wrong':'Réponse incorrecte, réessayez.',
+    'form.paste':'Coller', 'form.paste_failed':'Collage automatique impossible, collez manuellement',
+    'form.amount_placeholder':'Ex : 1000',
     'suivi.title':'Suivi de votre ordre', 'suivi.status.en_attente':'En attente',
     'suivi.status.paiement_recu':'Paiement reçu', 'suivi.status.credite':'Crédité avec succès',
     'suivi.status.rejete':'Paiement non reçu', 'suivi.status.fraude':'Paiement non reçu',
@@ -478,10 +503,14 @@ const KP_LANGS = {
     'faq.title':'Frequently asked questions', 'faq.sub':'Everything you need to know before you start',
     'support.title':'Need help?', 'support.sub':'Our team replies quickly',
     'back':'Back',
-    'depot.title':'Deposit to 1xBet', 'depot.waafi_number':'Receiving Waafi number', 'depot.waafi_name':'Account name',
+    'depot.title':'Deposit to 1xBet', 'depot.subtitle':'Top up your 1xBet account via Waafi',
+    'depot.send_first':'Send your payment first to:',
+    'depot.waafi_number':'Receiving Waafi number', 'depot.waafi_name':'Account name',
+    'depot.payment_method_name':'Waafi', 'depot.payment_instant':'Instant payment',
     'depot.amount':'Amount (DJF)', 'depot.bet_id':'1xBet ID (account to top up)',
-    'depot.sender_number':'Your Waafi number (sender)', 'depot.transfer_id':'Waafi Transfer ID (proof of payment)',
-    'depot.whatsapp':'WhatsApp number', 'depot.submit':'Submit deposit',
+    'depot.sender_number':'Your Waafi number (sender)', 'depot.sender_hint':'8 digits · starts with 77',
+    'depot.transfer_id':'Waafi Transfer ID (proof of payment)',
+    'depot.whatsapp':'WhatsApp number', 'depot.whatsapp_hint':'To contact you · required', 'depot.submit':'Submit deposit',
     'depot.steps.title':'How to send your Waafi payment',
     'depot.step1':'Open your Waafi app (or dial your operator\'s USSD code)',
     'depot.step2':'Choose "Send money" / Transfer',
@@ -499,7 +528,9 @@ const KP_LANGS = {
     'form.min_amount_depot':`Minimum amount: ${CONFIG.MIN_DEPOT_AMOUNT} DJF`,
     'form.min_amount_retrait':`Minimum amount: ${CONFIG.MIN_RETRAIT_AMOUNT} DJF`,
     'form.transfer_min':'Must contain at least 6 digits',
-    'form.captcha_label':'Anti-bot check', 'form.captcha_wrong':'Wrong answer, try again.',
+    'form.captcha_label':'Verification', 'form.captcha_wrong':'Wrong answer, try again.',
+    'form.paste':'Paste', 'form.paste_failed':'Could not paste automatically, please paste manually',
+    'form.amount_placeholder':'E.g: 1000',
     'suivi.title':'Track your order', 'suivi.status.en_attente':'Pending',
     'suivi.status.paiement_recu':'Payment received', 'suivi.status.credite':'Successfully credited',
     'suivi.status.rejete':'Payment not received', 'suivi.status.fraude':'Payment not received',
@@ -576,6 +607,13 @@ const ICONS = {
   bell: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
   flask: '<path d="M9 2v6l-6 10a2 2 0 0 0 1.8 3h14.4a2 2 0 0 0 1.8-3l-6-10V2"/><line x1="7" y1="14" x2="17" y2="14"/><line x1="9" y1="2" x2="15" y2="2"/>',
   clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  phone: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>',
+  user: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
+  key: '<circle cx="8" cy="15" r="4"/><path d="M10.5 12.5 20 3"/><path d="M17 6l3 3"/><path d="M14 9l2 2"/>',
+  clipboard: '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>',
+  inbox: '<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+  banknote: '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>',
 };
 function icon(name, size){
   size = size || 18;
@@ -795,14 +833,27 @@ function renderHome(app){
 /* ------------------------------ MATH CAPTCHA ----------------------- */
 function captchaHtml(id){
   return `
-    <div class="field">
-      <label>${t('form.captcha_label')}</label>
-      <div class="captcha-row">
-        <span class="captcha-question mono" id="${id}-question"></span>
-        <input type="number" inputmode="numeric" class="mono-input captcha-input" id="${id}-input" placeholder="?" required>
-      </div>
+    <div class="captcha-box">
+      <span class="captcha-text">${t('form.captcha_label')} : <span class="mono" id="${id}-question"></span></span>
+      <input type="number" inputmode="numeric" class="mono-input captcha-input" id="${id}-input" placeholder="?" required>
     </div>
   `;
+}
+function bindPasteButtons(root){
+  root.querySelectorAll('.btn-paste').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const target = document.getElementById(btn.dataset.target);
+      if (!target) return;
+      try {
+        const text = await navigator.clipboard.readText();
+        target.value = text.trim();
+        target.dispatchEvent(new Event('input', { bubbles: true }));
+        target.focus();
+      } catch (err) {
+        toast(t('form.paste_failed'), 'error');
+      }
+    });
+  });
 }
 function mountCaptcha(id){
   const a = Math.floor(Math.random() * 9) + 1;
@@ -817,7 +868,24 @@ function renderDepot(app){
   app.innerHTML = `
     ${headerHtml(true, '#/')}
     <div class="container form-page">
-      <div class="page-header"><h1>${t('depot.title')}</h1></div>
+      <div class="page-header"><h1>${icon('wallet', 22)} ${t('depot.title')}</h1></div>
+      <p class="page-subtitle">${t('depot.subtitle')}</p>
+
+      <div class="card payment-box" style="margin-bottom:18px;">
+        <div class="payment-box-title">${icon('inbox', 14)} ${t('depot.send_first')}</div>
+        <div class="payment-row">
+          <div class="payment-row-label">${icon('phone', 15)} ${t('depot.waafi_number')}</div>
+          <div class="payment-row-value">
+            <span>${CONFIG.WAAFI_NUMBER}</span>
+            <button type="button" id="copy-waafi-number" class="btn-copy-inline" title="${t('depot.copy_number')}">${icon('copy', 14)}</button>
+          </div>
+        </div>
+        <div class="payment-row">
+          <div class="payment-row-label">${icon('user', 15)} ${t('depot.waafi_name')}</div>
+          <div class="payment-row-value" style="font-family:var(--font-body);">${CONFIG.WAAFI_NAME}</div>
+        </div>
+      </div>
+
       <div class="card" style="margin-bottom:18px;">
         <h3 style="font-size:1rem;margin-bottom:6px;">${t('depot.steps.title')}</h3>
         <ol class="steps">
@@ -827,49 +895,60 @@ function renderDepot(app){
           <li>${t('depot.step4')}</li>
           <li>${t('depot.step5')}</li>
         </ol>
-        <div class="info-box" style="margin-bottom:0;">
-          <div>
-            <div class="label">${t('depot.waafi_number')}</div>
-            <div style="display:flex; align-items:center; gap:8px;">
-              <div class="value mono">${CONFIG.WAAFI_NUMBER}</div>
-              <button type="button" id="copy-waafi-number" title="${t('depot.copy_number')}" style="background:none;border:none;color:var(--text-dim);width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;">${icon('copy', 15)}</button>
-            </div>
-          </div>
-          <div style="text-align:right;"><div class="label">${t('depot.waafi_name')}</div><div class="value" style="font-size:.95rem;">${CONFIG.WAAFI_NAME}</div></div>
-        </div>
       </div>
+
       <form id="form-depot" class="card" novalidate>
+        <div class="method-card">
+          <div class="method-icon">${icon('wallet', 18)}</div>
+          <div>
+            <div class="method-title">${t('depot.payment_method_name')}</div>
+            <div class="method-sub">${t('depot.payment_instant')}</div>
+          </div>
+        </div>
+
         <div class="field">
-          <label for="d-amount">${t('depot.amount')}</label>
-          <input type="number" id="d-amount" class="mono-input" min="${CONFIG.MIN_DEPOT_AMOUNT}" step="1" required>
+          <label for="d-amount">${icon('banknote', 13)} ${t('depot.amount')}</label>
+          <div class="phone-input">
+            <span class="phone-prefix">DJF</span>
+            <input type="number" id="d-amount" class="mono-input" min="${CONFIG.MIN_DEPOT_AMOUNT}" step="1" placeholder="${t('form.amount_placeholder')}" required>
+          </div>
           <div class="hint">${t('form.min_amount_depot')}</div>
         </div>
         <div class="field">
-          <label for="d-betid">${t('depot.bet_id')}</label>
-          <input type="text" id="d-betid" required>
+          <label for="d-betid">${icon('target', 13)} ${t('depot.bet_id')}</label>
+          <div class="field-with-action">
+            <input type="text" id="d-betid" required>
+            <button type="button" class="btn btn-outline btn-sm btn-paste" data-target="d-betid">${icon('clipboard', 14)} ${t('form.paste')}</button>
+          </div>
         </div>
         <div class="field">
-          <label for="d-sender">${t('depot.sender_number')}</label>
-          <input type="tel" id="d-sender" class="mono-input" required>
-        </div>
-        <div class="field">
-          <label for="d-transfer">${t('depot.transfer_id')}</label>
-          <input type="text" id="d-transfer" class="mono-input" required>
+          <label for="d-transfer">${icon('key', 13)} ${t('depot.transfer_id')}</label>
+          <div class="field-with-action">
+            <input type="text" id="d-transfer" class="mono-input" required>
+            <button type="button" class="btn btn-outline btn-sm btn-paste" data-target="d-transfer">${icon('clipboard', 14)} ${t('form.paste')}</button>
+          </div>
           <div class="hint">${t('form.transfer_min')}</div>
         </div>
         <div class="field">
-          <label for="d-whatsapp">${t('depot.whatsapp')}</label>
+          <label for="d-sender">${icon('phone', 13)} ${t('depot.sender_number')}</label>
+          <input type="tel" id="d-sender" class="mono-input" required>
+          <div class="hint">${t('depot.sender_hint')}</div>
+        </div>
+        <div class="field">
+          <label for="d-whatsapp">${icon('message', 13)} ${t('depot.whatsapp')}</label>
           <div class="phone-input">
             <span class="phone-prefix">+253</span>
             <input type="tel" id="d-whatsapp" placeholder="77xxxxxx" inputmode="numeric" maxlength="8" required>
           </div>
+          <div class="hint">${t('depot.whatsapp_hint')}</div>
         </div>
         ${captchaHtml('captcha-depot')}
-        <button type="submit" class="btn btn-primary btn-block" id="d-submit">${t('depot.submit')}</button>
+        <button type="submit" class="btn btn-primary btn-block" id="d-submit">${icon('bolt', 16)} ${t('depot.submit')}</button>
       </form>
     </div>
   `;
   bindHeaderEvents();
+  bindPasteButtons(app);
   const checkCaptcha = mountCaptcha('captcha-depot');
   document.getElementById('copy-waafi-number').addEventListener('click', () => {
     navigator.clipboard.writeText(CONFIG.WAAFI_NUMBER).then(() => toast(currentLang==='fr' ? 'Numéro copié' : 'Number copied', 'success'));
