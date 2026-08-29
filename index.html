@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Simba — Dépôt & Retrait 1xBet via Waafi</title>
-<meta name="description" content="Simba : échange rapide et sécurisé entre Waafi et 1xBet. Dépôt et retrait en quelques minutes.">
+<title>Simba — Dépôt 1xBet via Waafi</title>
+<meta name="description" content="Simba : dépôt rapide et sécurisé de Waafi vers 1xBet, en quelques minutes.">
 <meta name="theme-color" content="#F5FAFE">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/jpeg" href="/logo.jpg">
 <link rel="apple-touch-icon" href="/logo.jpg">
-<meta property="og:title" content="Simba — Dépôt & Retrait 1xBet via Waafi">
-<meta property="og:description" content="Simba : échange rapide et sécurisé entre Waafi et 1xBet. Dépôt et retrait en quelques minutes.">
+<meta property="og:title" content="Simba — Dépôt 1xBet via Waafi">
+<meta property="og:description" content="Simba : dépôt rapide et sécurisé de Waafi vers 1xBet, en quelques minutes.">
 <meta property="og:image" content="https://simba-pay.com/logo.jpg">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
@@ -192,43 +192,8 @@ html[data-theme="dark"] .hero h1 span{background:linear-gradient(135deg,var(--pr
 .promo-code button:hover{color:var(--primary); background:rgba(56,189,248,.1);}
 .promo-code button svg{vertical-align:middle !important;}
 
-/* ============================= ACTION TABS (depot/retrait) ============================= */
-.action-card{max-width:640px; margin:0 auto; padding:10px;}
-.action-grid{
-  display:flex; gap:6px; background:var(--bg-alt); border-radius:999px; padding:6px;
-}
-.action-tile{
-  flex:1; display:flex; flex-direction:column; align-items:center; text-align:center; gap:3px;
-  padding:16px 12px; border-radius:999px; border:none; text-decoration:none; color:var(--primary-2);
-  background:transparent; transition:transform .25s var(--ease-out), box-shadow .3s ease, background .25s ease;
-  min-width:0; animation:fadeInUp .6s var(--ease-out) both;
-}
-@media (max-width:420px){.action-tile{padding:12px 8px;}}
-.action-tile.tile-depot{background:linear-gradient(135deg,var(--primary),var(--primary-2)); color:#ffffff; box-shadow:0 10px 24px -10px rgba(2,132,199,.55); animation-delay:.05s;}
-.action-tile.tile-retrait{color:var(--primary-2); animation-delay:.15s;}
-.action-tile:hover{transform:translateY(-2px);}
-.action-tile.tile-retrait:hover{background:var(--card-bg-solid); box-shadow:var(--shadow);}
-.action-tile.tile-depot:hover{box-shadow:0 14px 30px -10px rgba(2,132,199,.6);}
-.action-tile:active{transform:scale(.95); transition:transform .12s ease;}
-.tile-icon{width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-bottom:2px; transition:transform .3s var(--ease-out);}
-.action-tile:hover .tile-icon{transform:scale(1.1);}
-.tile-depot .tile-icon{background:rgba(255,255,255,.22); color:#ffffff;}
-.tile-retrait .tile-icon{background:var(--card-bg-solid); color:var(--primary);}
-.tile-title{font-family:var(--font-title); font-weight:700; font-size:.92rem; color:inherit;}
-.tile-desc{font-size:.68rem; color:var(--text-dim); line-height:1.3;}
-@media (max-width:420px){.tile-desc{display:none;}}
-
-/* Compact tab switcher shown atop Dépôt/Retrait pages */
-.form-tabs{max-width:520px; margin:14px auto 22px;}
-.form-tabs .action-tile{flex-direction:row; justify-content:center; gap:7px; padding:13px 10px; font-size:.88rem;}
-.form-tabs .tile-emoji{font-size:1rem; line-height:1;}
-.action-tile.is-active{background:linear-gradient(135deg,var(--primary),var(--primary-2)); color:#ffffff; box-shadow:0 10px 24px -10px rgba(2,132,199,.55);}
-.action-tile.is-inactive{background:transparent; color:var(--primary-2); box-shadow:none;}
-.action-tile.is-inactive:hover{background:var(--card-bg-solid); box-shadow:var(--shadow);}
-
 /* Waafi provider badge (brand green, independent of site palette) */
 .wf-badge{background:#00A651; color:#ffffff; font-weight:800; font-size:.68rem; letter-spacing:.02em; border-radius:50%;}
-.tile-depot .tile-desc{color:rgba(255,255,255,.85);}
 
 /* ============================= SECTIONS ============================= */
 section{padding:44px 0;}
@@ -442,12 +407,9 @@ const KP_LANGS = {
     'nav.faq':'FAQ', 'nav.install':'Installer l\'app',
     'hero.eyebrow':'Échange Waafi ⇄ 1xBet',
     'hero.title1':'Rechargez votre compte', 'hero.title2':'1xBet en 2 minutes',
-    'hero.sub':'Dépôt et retrait instantanés entre Waafi et 1xBet. Simple, rapide, sécurisé.',
+    'hero.sub':'Dépôt instantané de Waafi vers 1xBet. Simple, rapide, sécurisé.',
     'hero.promo':'Code promo 1xBet',
     'hero.cta':'Créer mon compte 1xBet',
-    'tile.depot.title':'Dépôt', 'tile.depot.desc':'Waafi → 1xBet : rechargez votre compte de jeu',
-    'tile.retrait.title':'Retrait', 'tile.retrait.desc':'1xBet → Waafi : retirez vos gains',
-    'tabs.depot':'Dépôt 1xBet', 'tabs.retrait':'Retrait 1xBet',
     'faq.title':'Questions fréquentes', 'faq.sub':'Tout ce qu\'il faut savoir avant de commencer',
     'support.title':'Besoin d\'aide ?', 'support.sub':'Notre équipe répond rapidement',
     'back':'Retour',
@@ -466,18 +428,8 @@ const KP_LANGS = {
     'depot.step4':'Confirmez avec votre code PIN Waafi',
     'depot.step5':'Copiez le Transfer ID reçu par SMS et collez-le dans le formulaire ci-dessous',
     'depot.copy_number':'Copier le numéro',
-    'retrait.title':'Retrait depuis 1xBet', 'retrait.subtitle':'Recevez votre argent sur Waafi',
-    'retrait.steps.title':'Instructions retrait 1xBet',
-    'retrait.step1':'Allez sur 1xBet → Retrait', 'retrait.step2':'Choisissez Waafi comme méthode de retrait',
-    'retrait.step3':'Entrez le montant et confirmez sur 1xBet', 'retrait.step4':'Copiez le code de retrait généré',
-    'retrait.step5':'Remplissez le formulaire ci-dessous avec ce code',
-    'retrait.bet_id':'ID 1xBet', 'retrait.amount':'Montant à retirer (DJF)', 'retrait.waafi_reception':'Votre numéro Waafi',
-    'retrait.code':'Code de retrait 1xBet', 'retrait.code_hint':'Lettres et chiffres · 4 caractères',
-    'retrait.payment_instant':'Réception instantanée',
-    'retrait.whatsapp':'Numéro WhatsApp', 'retrait.whatsapp_hint':'Pour vous contacter · obligatoire', 'retrait.submit':'Soumettre le retrait',
     'form.required':'Ce champ est requis',
     'form.min_amount_depot':`Montant minimum : ${CONFIG.MIN_DEPOT_AMOUNT} DJF`,
-    'form.min_amount_retrait':`Montant minimum : ${CONFIG.MIN_RETRAIT_AMOUNT} DJF`,
     'form.transfer_min':'Doit contenir au moins 6 chiffres',
     'form.captcha_label':'Vérification', 'form.captcha_wrong':'Réponse incorrecte, réessayez.',
     'form.paste':'Coller', 'form.paste_failed':'Collage automatique impossible, collez manuellement',
@@ -508,12 +460,9 @@ const KP_LANGS = {
     'nav.faq':'FAQ', 'nav.install':'Install app',
     'hero.eyebrow':'Waafi ⇄ 1xBet exchange',
     'hero.title1':'Top up your', 'hero.title2':'1xBet account in 2 minutes',
-    'hero.sub':'Instant deposits and withdrawals between Waafi and 1xBet. Simple, fast, secure.',
+    'hero.sub':'Instant deposit from Waafi to 1xBet. Simple, fast, secure.',
     'hero.promo':'1xBet promo code',
     'hero.cta':'Create my 1xBet account',
-    'tile.depot.title':'Deposit', 'tile.depot.desc':'Waafi → 1xBet: top up your betting account',
-    'tile.retrait.title':'Withdraw', 'tile.retrait.desc':'1xBet → Waafi: withdraw your winnings',
-    'tabs.depot':'Deposit 1xBet', 'tabs.retrait':'Withdraw 1xBet',
     'faq.title':'Frequently asked questions', 'faq.sub':'Everything you need to know before you start',
     'support.title':'Need help?', 'support.sub':'Our team replies quickly',
     'back':'Back',
@@ -532,18 +481,8 @@ const KP_LANGS = {
     'depot.step4':'Confirm with your Waafi PIN',
     'depot.step5':'Copy the Transfer ID received by SMS and paste it in the form below',
     'depot.copy_number':'Copy number',
-    'retrait.title':'Withdraw from 1xBet', 'retrait.subtitle':'Receive your money on Waafi',
-    'retrait.steps.title':'1xBet withdrawal instructions',
-    'retrait.step1':'Go to 1xBet → Withdraw', 'retrait.step2':'Choose Waafi as withdrawal method',
-    'retrait.step3':'Enter amount and confirm on 1xBet', 'retrait.step4':'Copy the generated withdrawal code',
-    'retrait.step5':'Fill in the form below with that code',
-    'retrait.bet_id':'1xBet ID', 'retrait.amount':'Amount to withdraw (DJF)', 'retrait.waafi_reception':'Your Waafi number',
-    'retrait.code':'1xBet withdrawal code', 'retrait.code_hint':'Letters and digits · 4 characters',
-    'retrait.payment_instant':'Instant reception',
-    'retrait.whatsapp':'WhatsApp number', 'retrait.whatsapp_hint':'To contact you · required', 'retrait.submit':'Submit withdrawal',
     'form.required':'This field is required',
     'form.min_amount_depot':`Minimum amount: ${CONFIG.MIN_DEPOT_AMOUNT} DJF`,
-    'form.min_amount_retrait':`Minimum amount: ${CONFIG.MIN_RETRAIT_AMOUNT} DJF`,
     'form.transfer_min':'Must contain at least 6 digits',
     'form.captcha_label':'Verification', 'form.captcha_wrong':'Wrong answer, try again.',
     'form.paste':'Paste', 'form.paste_failed':'Could not paste automatically, please paste manually',
@@ -693,8 +632,6 @@ function route(){
   teardownRealtime();
 
   if (hash.startsWith('#suivi-')) { renderSuivi(app, hash.slice(7)); return; }
-  if (hash === '#depot') { renderDepot(app); return; }
-  if (hash === '#retrait') { renderRetrait(app); return; }
   if (hash === '#login') { renderLogin(app); return; }
   if (hash === '#admin') {
     if (!state.effectiveRole) { renderLogin(app); return; }
@@ -769,7 +706,6 @@ function renderHome(app){
     </section>
 
     <div class="container form-page">
-      ${formTabsHtml('depot')}
       ${depotContentHtml()}
     </div>
 
@@ -806,13 +742,13 @@ function renderHome(app){
 
   const faqData = currentLang === 'fr' ? [
     ['Combien de temps prend un dépôt ?', 'En général entre 1 et 5 minutes après réception du paiement Waafi.'],
-    ['Quel est le montant minimum ?', `Le montant minimum est de ${CONFIG.MIN_DEPOT_AMOUNT} DJF pour un dépôt et ${CONFIG.MIN_RETRAIT_AMOUNT} DJF pour un retrait.`],
+    ['Quel est le montant minimum ?', `Le montant minimum est de ${CONFIG.MIN_DEPOT_AMOUNT} DJF pour un dépôt.`],
     ['Comment suivre mon ordre ?', 'Après soumission, vous recevez un lien de suivi en temps réel (#suivi-XXXX).'],
     ['Le code promo est-il obligatoire ?', `Non, mais utiliser "${CONFIG.PROMO_CODE}" vous donne un bonus à l'inscription 1xBet.`],
     ['Que faire si mon transfert échoue ?', 'Contactez notre support WhatsApp ou Telegram avec votre référence d\'ordre.'],
   ] : [
     ['How long does a deposit take?', 'Usually between 1 and 5 minutes after the Waafi payment is received.'],
-    ['What is the minimum amount?', `The minimum amount is ${CONFIG.MIN_DEPOT_AMOUNT} DJF for a deposit and ${CONFIG.MIN_RETRAIT_AMOUNT} DJF for a withdrawal.`],
+    ['What is the minimum amount?', `The minimum amount is ${CONFIG.MIN_DEPOT_AMOUNT} DJF for a deposit.`],
     ['How do I track my order?', 'After submitting, you get a real-time tracking link (#suivi-XXXX).'],
     ['Is the promo code required?', `No, but using "${CONFIG.PROMO_CODE}" gives you a bonus on 1xBet signup.`],
     ['What if my transfer fails?', 'Contact our WhatsApp or Telegram support with your order reference.'],
@@ -846,18 +782,6 @@ function captchaHtml(id){
     <div class="captcha-box">
       <span class="captcha-text">${t('form.captcha_label')} : <span class="mono" id="${id}-question"></span></span>
       <input type="number" inputmode="numeric" class="mono-input captcha-input" id="${id}-input" placeholder="?" required>
-    </div>
-  `;
-}
-function formTabsHtml(active){
-  return `
-    <div class="action-grid form-tabs">
-      <a href="#depot" class="action-tile tile-depot ${active === 'depot' ? 'is-active' : 'is-inactive'}">
-        <span class="tile-emoji">📥</span><span class="tile-title">${t('tabs.depot')}</span>
-      </a>
-      <a href="#retrait" class="action-tile tile-retrait ${active === 'retrait' ? 'is-active' : 'is-inactive'}">
-        <span class="tile-emoji">📤</span><span class="tile-title">${t('tabs.retrait')}</span>
-      </a>
     </div>
   `;
 }
@@ -1014,124 +938,6 @@ function bindDepotForm(app){
     }
   });
 }
-function renderDepot(app){
-  app.innerHTML = `
-    ${headerHtml(true, '#/')}
-    <div class="container form-page">
-      ${formTabsHtml('depot')}
-      ${depotContentHtml()}
-    </div>
-  `;
-  bindHeaderEvents();
-  bindDepotForm(app);
-}
-
-/* ------------------------------ RETRAIT PAGE ------------------------------ */
-function renderRetrait(app){
-  app.innerHTML = `
-    ${headerHtml(true, '#/')}
-    <div class="container form-page">
-      ${formTabsHtml('retrait')}
-      <div class="page-header"><h1>📤 ${t('retrait.title')}</h1></div>
-      <p class="page-subtitle">${t('retrait.subtitle')}</p>
-
-      <div class="card" style="margin-bottom:18px;">
-        <h3 style="font-size:1rem;margin-bottom:6px;">📋 ${t('retrait.steps.title')}</h3>
-        <ol class="steps">
-          <li>${t('retrait.step1')}</li>
-          <li>${t('retrait.step2')}</li>
-          <li>${t('retrait.step3')}</li>
-          <li>${t('retrait.step4')}</li>
-          <li>${t('retrait.step5')}</li>
-        </ol>
-      </div>
-
-      <form id="form-retrait" class="card" novalidate>
-        <div class="field">
-          <label for="r-betid">🎯 ${t('retrait.bet_id')}</label>
-          <div class="field-with-action">
-            <input type="text" id="r-betid" required>
-            <button type="button" class="btn btn-outline btn-sm btn-paste" data-target="r-betid">📋 ${t('form.paste')}</button>
-          </div>
-        </div>
-        <div class="field">
-          <label for="r-code">🔑 ${t('retrait.code')}</label>
-          <div class="field-with-action">
-            <input type="text" id="r-code" class="mono-input" required>
-            <button type="button" class="btn btn-outline btn-sm btn-paste" data-target="r-code">📋 ${t('form.paste')}</button>
-          </div>
-          <div class="hint">${t('retrait.code_hint')}</div>
-        </div>
-
-        <div class="method-card">
-          <div class="method-icon wf-badge">WF</div>
-          <div>
-            <div class="method-title">${t('depot.payment_method_name')}</div>
-            <div class="method-sub">${t('retrait.payment_instant')}</div>
-          </div>
-        </div>
-
-        <div class="field">
-          <label for="r-waafi">📱 ${t('retrait.waafi_reception')}</label>
-          <div class="field-with-action">
-            <input type="tel" id="r-waafi" class="mono-input" required>
-            <button type="button" class="btn btn-outline btn-sm btn-paste" data-target="r-waafi">📋 ${t('form.paste')}</button>
-          </div>
-        </div>
-        <div class="field">
-          <label for="r-amount">💵 ${t('retrait.amount')}</label>
-          <div class="phone-input">
-            <span class="phone-prefix">DJF</span>
-            <input type="number" id="r-amount" class="mono-input" min="${CONFIG.MIN_RETRAIT_AMOUNT}" step="1" placeholder="${t('form.amount_placeholder')}" required>
-          </div>
-          <div class="hint">${t('form.min_amount_retrait')}</div>
-        </div>
-        <div class="field">
-          <label for="r-whatsapp">💬 ${t('retrait.whatsapp')}</label>
-          <div class="phone-input">
-            <span class="phone-prefix">+253</span>
-            <input type="tel" id="r-whatsapp" placeholder="77xxxxxx" inputmode="numeric" maxlength="8" required>
-          </div>
-          <div class="hint">${t('retrait.whatsapp_hint')}</div>
-        </div>
-        ${captchaHtml('captcha-retrait')}
-        <button type="submit" class="btn btn-primary btn-block" id="r-submit">⚡ ${t('retrait.submit')}</button>
-      </form>
-    </div>
-  `;
-  bindHeaderEvents();
-  bindPasteButtons(app);
-  const checkCaptcha = mountCaptcha('captcha-retrait');
-
-  document.getElementById('form-retrait').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const betId = document.getElementById('r-betid').value.trim();
-    const amount = Number(document.getElementById('r-amount').value);
-    const waafi = document.getElementById('r-waafi').value.trim();
-    const code = document.getElementById('r-code').value.trim();
-    const whatsapp = document.getElementById('r-whatsapp').value.trim();
-
-    if (!amount || amount < CONFIG.MIN_RETRAIT_AMOUNT) return toast(t('form.min_amount_retrait'), 'error');
-    if (!betId || !waafi || !code || !whatsapp) return toast(t('form.required'), 'error');
-    if (!checkCaptcha()) return toast(t('form.captcha_wrong'), 'error');
-
-    const btn = document.getElementById('r-submit');
-    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
-    try {
-      const { data, error } = await sb.rpc('create_retrait_order', {
-        p_montant: amount, p_id_bet1x: betId, p_numero_waafi_reception: waafi,
-        p_code_retrait_1x: code, p_whatsapp: whatsapp || null,
-        p_lang: currentLang,
-      });
-      if (error) throw error;
-      location.hash = '#suivi-' + data;
-    } catch (err) {
-      toast(err.message || 'Erreur', 'error');
-      btn.disabled = false; btn.textContent = t('retrait.submit');
-    }
-  });
-}
-
 /* ------------------------------ SUIVI PAGE ------------------------------ */
 // Les IDs (DDMMYYYY-XXX) ne portent plus de lettre de type : on tente
 // dépôt puis retrait via get_order_status (RPC publique, sans exposer les
