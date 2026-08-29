@@ -97,14 +97,6 @@ header.site{
 .lang-btn{border:none; background:none; padding:0 11px; height:38px; font-size:.74rem; font-weight:700; letter-spacing:.02em; color:var(--text-dim); transition:background .2s ease, color .2s ease;}
 .lang-btn.active{background:var(--primary); color:#ffffff;}
 .lang-btn:hover:not(.active){color:var(--primary-2);}
-.status-pill{
-  display:flex; align-items:center; gap:6px; font-size:.72rem; color:var(--text-dim);
-  border:1px solid var(--card-border); border-radius:999px; padding:6px 10px; background:var(--card-bg);
-}
-.status-dot{width:8px; height:8px; border-radius:50%; background:var(--success); box-shadow:0 0 0 3px rgba(22,163,74,.18);}
-@media (prefers-reduced-motion:no-preference){
-  .status-dot{animation:pulse-dot 1.8s ease-in-out infinite;}
-}
 @keyframes pulse-dot{0%,100%{opacity:1;}50%{opacity:.45;}}
 
 /* ============================= BUTTONS ============================= */
@@ -733,7 +725,6 @@ function headerHtml(showBack, backHash){
           <button class="lang-btn${currentLang==='en' ? ' active' : ''}" data-lang="en">EN</button>
         </div>
         <button class="icon-btn" id="btn-theme" title="Theme">${document.documentElement.getAttribute('data-theme')==='dark' ? icon('sun', 17) : icon('moon', 17)}</button>
-        <span class="status-pill"><span class="status-dot"></span> Connecté</span>
       </div>
     </div>
   </header>`;
