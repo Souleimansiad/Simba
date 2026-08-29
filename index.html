@@ -868,20 +868,20 @@ function renderDepot(app){
   app.innerHTML = `
     ${headerHtml(true, '#/')}
     <div class="container form-page">
-      <div class="page-header"><h1>${icon('wallet', 22)} ${t('depot.title')}</h1></div>
+      <div class="page-header"><h1>💰 ${t('depot.title')}</h1></div>
       <p class="page-subtitle">${t('depot.subtitle')}</p>
 
       <div class="card payment-box" style="margin-bottom:18px;">
-        <div class="payment-box-title">${icon('inbox', 14)} ${t('depot.send_first')}</div>
+        <div class="payment-box-title">📩 ${t('depot.send_first')}</div>
         <div class="payment-row">
-          <div class="payment-row-label">${icon('phone', 15)} ${t('depot.waafi_number')}</div>
+          <div class="payment-row-label">📱 ${t('depot.waafi_number')}</div>
           <div class="payment-row-value">
             <span>${CONFIG.WAAFI_NUMBER}</span>
-            <button type="button" id="copy-waafi-number" class="btn-copy-inline" title="${t('depot.copy_number')}">${icon('copy', 14)}</button>
+            <button type="button" id="copy-waafi-number" class="btn-copy-inline" title="${t('depot.copy_number')}">📋</button>
           </div>
         </div>
         <div class="payment-row">
-          <div class="payment-row-label">${icon('user', 15)} ${t('depot.waafi_name')}</div>
+          <div class="payment-row-label">👤 ${t('depot.waafi_name')}</div>
           <div class="payment-row-value" style="font-family:var(--font-body);">${CONFIG.WAAFI_NAME}</div>
         </div>
       </div>
@@ -899,7 +899,7 @@ function renderDepot(app){
 
       <form id="form-depot" class="card" novalidate>
         <div class="method-card">
-          <div class="method-icon">${icon('wallet', 18)}</div>
+          <div class="method-icon">💳</div>
           <div>
             <div class="method-title">${t('depot.payment_method_name')}</div>
             <div class="method-sub">${t('depot.payment_instant')}</div>
@@ -907,7 +907,7 @@ function renderDepot(app){
         </div>
 
         <div class="field">
-          <label for="d-amount">${icon('banknote', 13)} ${t('depot.amount')}</label>
+          <label for="d-amount">💵 ${t('depot.amount')}</label>
           <div class="phone-input">
             <span class="phone-prefix">DJF</span>
             <input type="number" id="d-amount" class="mono-input" min="${CONFIG.MIN_DEPOT_AMOUNT}" step="1" placeholder="${t('form.amount_placeholder')}" required>
@@ -915,27 +915,27 @@ function renderDepot(app){
           <div class="hint">${t('form.min_amount_depot')}</div>
         </div>
         <div class="field">
-          <label for="d-betid">${icon('target', 13)} ${t('depot.bet_id')}</label>
+          <label for="d-betid">🎯 ${t('depot.bet_id')}</label>
           <div class="field-with-action">
             <input type="text" id="d-betid" required>
-            <button type="button" class="btn btn-outline btn-sm btn-paste" data-target="d-betid">${icon('clipboard', 14)} ${t('form.paste')}</button>
+            <button type="button" class="btn btn-outline btn-sm btn-paste" data-target="d-betid">📋 ${t('form.paste')}</button>
           </div>
         </div>
         <div class="field">
-          <label for="d-transfer">${icon('key', 13)} ${t('depot.transfer_id')}</label>
+          <label for="d-transfer">🔑 ${t('depot.transfer_id')}</label>
           <div class="field-with-action">
             <input type="text" id="d-transfer" class="mono-input" required>
-            <button type="button" class="btn btn-outline btn-sm btn-paste" data-target="d-transfer">${icon('clipboard', 14)} ${t('form.paste')}</button>
+            <button type="button" class="btn btn-outline btn-sm btn-paste" data-target="d-transfer">📋 ${t('form.paste')}</button>
           </div>
           <div class="hint">${t('form.transfer_min')}</div>
         </div>
         <div class="field">
-          <label for="d-sender">${icon('phone', 13)} ${t('depot.sender_number')}</label>
+          <label for="d-sender">📞 ${t('depot.sender_number')}</label>
           <input type="tel" id="d-sender" class="mono-input" required>
           <div class="hint">${t('depot.sender_hint')}</div>
         </div>
         <div class="field">
-          <label for="d-whatsapp">${icon('message', 13)} ${t('depot.whatsapp')}</label>
+          <label for="d-whatsapp">💬 ${t('depot.whatsapp')}</label>
           <div class="phone-input">
             <span class="phone-prefix">+253</span>
             <input type="tel" id="d-whatsapp" placeholder="77xxxxxx" inputmode="numeric" maxlength="8" required>
@@ -943,7 +943,7 @@ function renderDepot(app){
           <div class="hint">${t('depot.whatsapp_hint')}</div>
         </div>
         ${captchaHtml('captcha-depot')}
-        <button type="submit" class="btn btn-primary btn-block" id="d-submit">${icon('bolt', 16)} ${t('depot.submit')}</button>
+        <button type="submit" class="btn btn-primary btn-block" id="d-submit">⚡ ${t('depot.submit')}</button>
       </form>
     </div>
   `;
