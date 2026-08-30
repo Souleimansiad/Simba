@@ -42,15 +42,30 @@ html[data-theme="light"]{
   --input-bg:#F8FCFF;
 }
 html[data-theme="dark"]{
-  --bg:#07101e; --bg-alt:#0A1626; --bg-elev:#0E1B2E;
-  --card-bg:rgba(255,255,255,.04); --card-bg-solid:#0E1B2E;
-  --card-border:rgba(56,189,248,.1);
-  --text:#ffffff; --text-dim:#5c7a9e; --text-faint:#3D5670;
-  --glow:0 0 44px rgba(56,189,248,.32);
-  --shadow:0 20px 60px -20px rgba(0,0,0,.6);
-  --shadow-hover:0 26px 64px -18px rgba(56,189,248,.35);
-  --input-bg:rgba(255,255,255,.04);
+  --bg:#0C4D78; --bg-alt:#0F5C8F; --bg-elev:#12669E;
+  --card-bg:rgba(255,255,255,.14); --card-bg-solid:rgba(255,255,255,.14);
+  --card-border:rgba(255,255,255,.28);
+  --text:#ffffff; --text-dim:#C3E2F7; --text-faint:#8FC3E8;
+  --glow:0 0 44px rgba(56,189,248,.45);
+  --shadow:0 20px 60px -20px rgba(4,20,32,.45);
+  --shadow-hover:0 26px 64px -18px rgba(4,20,32,.55);
+  --input-bg:rgba(255,255,255,.10);
 }
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .hero-title-card,
+html[data-theme="dark"] .promo-row,
+html[data-theme="dark"] .faq-item{backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);}
+/* --primary-2 (bleu moyen) perd du contraste sur le nouveau fond sombre plus clair : éclaircit ces textes/icônes d'accent */
+html[data-theme="dark"] .eyebrow,
+html[data-theme="dark"] .faq-q,
+html[data-theme="dark"] .payment-box-title,
+html[data-theme="dark"] .payment-row-value,
+html[data-theme="dark"] .captcha-text,
+html[data-theme="dark"] .phone-input .phone-prefix,
+html[data-theme="dark"] .info-box .value,
+html[data-theme="dark"] .suivi-id,
+html[data-theme="dark"] .suivi-state-icon,
+html[data-theme="dark"] .home-tab:not(.active){color:#7DD3FC;}
 *{box-sizing:border-box; margin:0; padding:0;}
 html{scroll-behavior:smooth;}
 body{
