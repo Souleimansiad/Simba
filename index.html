@@ -42,17 +42,31 @@ html[data-theme="light"]{
   --input-bg:#F8FCFF;
 }
 html[data-theme="dark"]{
-  --bg:#0E2A47; --bg-alt:#F0F7FC; --bg-elev:#FFFFFF;
-  --card-bg:#FFFFFF; --card-bg-solid:#FFFFFF;
-  --card-border:#BAE6FD;
-  --text:#0F172A; --text-dim:#64748B; --text-faint:#94A3B8;
+  --bg:#0E2A47; --bg-alt:#123A5E; --bg-elev:#0E2A47;
+  --card-bg:rgba(255,255,255,.10); --card-bg-solid:rgba(255,255,255,.10);
+  --card-border:rgba(255,255,255,.22);
+  --text:#ffffff; --text-dim:#AFCBE3; --text-faint:#7FA3C4;
   --glow:0 0 44px rgba(56,189,248,.45);
   --shadow:0 20px 50px -20px rgba(4,20,32,.55);
   --shadow-hover:0 26px 60px -18px rgba(4,20,32,.65);
-  --input-bg:#F8FCFF;
+  --input-bg:rgba(255,255,255,.08);
 }
-/* Le footer est le seul texte posé directement sur le bleu marine (pas sur une card blanche) */
-html[data-theme="dark"] footer.site{color:#9FC3E3;}
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .hero-title-card,
+html[data-theme="dark"] .promo-row,
+html[data-theme="dark"] .faq-item{backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);}
+/* --primary-2 (bleu moyen) manque de contraste sur les cards en verre marine : éclaircit ces textes/icônes d'accent */
+html[data-theme="dark"] .eyebrow,
+html[data-theme="dark"] .faq-q,
+html[data-theme="dark"] .payment-box-title,
+html[data-theme="dark"] .payment-row-value,
+html[data-theme="dark"] .captcha-text,
+html[data-theme="dark"] .phone-input .phone-prefix,
+html[data-theme="dark"] .info-box .value,
+html[data-theme="dark"] .suivi-id,
+html[data-theme="dark"] .suivi-state-icon,
+html[data-theme="dark"] .home-tab:not(.active){color:#7DD3FC;}
+html[data-theme="dark"] .hero h1 span{background:linear-gradient(135deg,var(--primary),#BAE6FD); -webkit-background-clip:text; background-clip:text; color:transparent;}
 *{box-sizing:border-box; margin:0; padding:0;}
 html{scroll-behavior:smooth;}
 body{
