@@ -184,16 +184,6 @@ header.site{
 .hero h1{font-size:clamp(1.6rem,4.4vw,2.5rem); line-height:1.1; margin-bottom:8px;}
 .hero h1 span{background:linear-gradient(135deg,var(--primary),var(--accent)); -webkit-background-clip:text; background-clip:text; color:transparent;}
 .hero p.sub{color:var(--text-dim); font-size:.92rem; margin-bottom:14px;}
-.hero-title-card,.promo-row{position:relative; isolation:isolate;}
-.hero-title-card::before,.promo-row::before{
-  content:''; position:absolute; z-index:-1; inset:-8px; border-radius:calc(var(--radius-l) + 8px);
-  background:linear-gradient(120deg,var(--primary),var(--accent),var(--primary-2),var(--primary));
-  background-size:300% 300%; filter:blur(18px); opacity:.35;
-}
-@media (prefers-reduced-motion:no-preference){
-  .hero-title-card::before,.promo-row::before{animation:glowShift 8s ease-in-out infinite;}
-}
-@keyframes glowShift{0%,100%{background-position:0% 50%;}50%{background-position:100% 50%;}}
 .hero-title-card{background:var(--card-bg-solid); border:1px solid var(--card-border); border-radius:var(--radius-l); box-shadow:var(--shadow); padding:16px 18px; margin-bottom:10px;}
 .hero-title-card p.sub{margin-bottom:0;}
 .promo-row{
