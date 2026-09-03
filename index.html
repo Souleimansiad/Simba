@@ -166,7 +166,6 @@ header.site{
 @keyframes float-a{0%,100%{transform:translate(0,0);}50%{transform:translate(30px,40px);}}
 @keyframes float-b{0%,100%{transform:translate(0,0);}50%{transform:translate(-40px,20px);}}
 .hero-content{position:relative; z-index:1; text-align:center; max-width:680px; margin:0 auto; animation:fadeInUp .7s var(--ease-out) both;}
-.eyebrow{display:inline-flex; align-items:center; gap:5px; background:var(--card-bg); border:1px solid var(--card-border); padding:5px 12px; border-radius:999px; font-size:.72rem; color:var(--accent); font-weight:600; margin-bottom:12px;}
 .hero h1{font-size:clamp(1.6rem,4.4vw,2.5rem); line-height:1.1; margin-bottom:8px;}
 .hero h1 span{background:linear-gradient(135deg,var(--primary),var(--accent)); -webkit-background-clip:text; background-clip:text; color:transparent;}
 .hero p.sub{color:var(--text-dim); font-size:.92rem; margin-bottom:14px;}
@@ -278,9 +277,6 @@ footer.site{border-top:1px solid var(--card-border); padding:18px 0; text-align:
 .phone-input .phone-prefix{display:flex; align-items:center; padding:0 10px; color:var(--accent); font-family:var(--font-mono); font-size:.9rem; font-weight:600; background:var(--bg-alt); border-right:1.5px solid var(--card-border); white-space:nowrap;}
 .phone-input input{border:none; background:transparent; flex:1; min-width:0; padding:10px 12px; color:var(--text); font-size:.9rem; font-family:var(--font-mono);}
 .phone-input input:focus{outline:none; box-shadow:none;}
-.steps{list-style:none; counter-reset:step; margin-bottom:14px;}
-.steps li{counter-increment:step; display:flex; gap:10px; padding:7px 0; font-size:.85rem; color:var(--text-dim);}
-.steps li::before{content:counter(step); flex:0 0 auto; width:22px; height:22px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-size:.74rem; font-weight:700;}
 .captcha-box{display:flex; align-items:center; justify-content:space-between; gap:10px; border:1.5px solid var(--card-border); background:var(--bg-alt); border-radius:var(--radius-m); padding:10px 12px; margin-bottom:12px;}
 .captcha-text{font-weight:700; font-size:.86rem; color:var(--accent);}
 .captcha-input{max-width:70px; text-align:center; flex-shrink:0;}
@@ -418,7 +414,6 @@ const CONFIG = {
 const KP_LANGS = {
   fr: {
     'nav.faq':'FAQ', 'nav.install':'Installer l\'app',
-    'hero.eyebrow':'Échange Waafi ⇄ 1xBet',
     'hero.title1':'Rechargez votre compte', 'hero.title2':'1xBet en 2 minutes',
     'hero.sub':'Dépôt et retrait instantanés entre Waafi et 1xBet. Simple, rapide, sécurisé.',
     'hero.promo':'Code promo 1xBet',
@@ -434,19 +429,9 @@ const KP_LANGS = {
     'depot.sender_number':'Votre numéro Waafi (expéditeur)', 'depot.sender_hint':'8 chiffres · commence par 77',
     'depot.transfer_id':'Transfer ID Waafi (preuve de paiement)',
     'depot.whatsapp':'Numéro WhatsApp', 'depot.whatsapp_hint':'Pour vous contacter · obligatoire', 'depot.submit':'Soumettre le dépôt',
-    'depot.steps.title':'Comment envoyer votre paiement Waafi',
-    'depot.step1':'Ouvrez votre application Waafi (ou composez le code USSD de votre opérateur)',
-    'depot.step2':'Choisissez « Envoyer de l\'argent » / Transfert',
-    'depot.step3':'Entrez le numéro de réception ci-dessous et le montant exact',
-    'depot.step4':'Confirmez avec votre code PIN Waafi',
-    'depot.step5':'Copiez le Transfer ID reçu par SMS et collez-le dans le formulaire ci-dessous',
     'depot.copy_number':'Copier le numéro',
     'tabs.depot':'Dépôt 1xBet', 'tabs.retrait':'Retrait 1xBet',
     'retrait.title':'Retrait depuis 1xBet', 'retrait.subtitle':'Recevez votre argent sur Waafi',
-    'retrait.steps.title':'Instructions retrait 1xBet',
-    'retrait.step1':'Allez sur 1xBet → Retrait', 'retrait.step2':'Choisissez Waafi comme méthode de retrait',
-    'retrait.step3':'Entrez le montant et confirmez sur 1xBet', 'retrait.step4':'Copiez le code de retrait généré',
-    'retrait.step5':'Remplissez le formulaire ci-dessous avec ce code',
     'retrait.bet_id':'ID 1xBet', 'retrait.amount':'Montant à retirer (DJF)', 'retrait.waafi_reception':'Votre numéro Waafi',
     'retrait.code':'Code de retrait 1xBet', 'retrait.code_hint':'Lettres et chiffres · 4 caractères',
     'retrait.payment_instant':'Réception instantanée',
@@ -482,7 +467,6 @@ const KP_LANGS = {
   },
   en: {
     'nav.faq':'FAQ', 'nav.install':'Install app',
-    'hero.eyebrow':'Waafi ⇄ 1xBet exchange',
     'hero.title1':'Top up your', 'hero.title2':'1xBet account in 2 minutes',
     'hero.sub':'Instant deposits and withdrawals between Waafi and 1xBet. Simple, fast, secure.',
     'hero.promo':'1xBet promo code',
@@ -498,19 +482,9 @@ const KP_LANGS = {
     'depot.sender_number':'Your Waafi number (sender)', 'depot.sender_hint':'8 digits · starts with 77',
     'depot.transfer_id':'Waafi Transfer ID (proof of payment)',
     'depot.whatsapp':'WhatsApp number', 'depot.whatsapp_hint':'To contact you · required', 'depot.submit':'Submit deposit',
-    'depot.steps.title':'How to send your Waafi payment',
-    'depot.step1':'Open your Waafi app (or dial your operator\'s USSD code)',
-    'depot.step2':'Choose "Send money" / Transfer',
-    'depot.step3':'Enter the receiving number below and the exact amount',
-    'depot.step4':'Confirm with your Waafi PIN',
-    'depot.step5':'Copy the Transfer ID received by SMS and paste it in the form below',
     'depot.copy_number':'Copy number',
     'tabs.depot':'Deposit 1xBet', 'tabs.retrait':'Withdraw 1xBet',
     'retrait.title':'Withdraw from 1xBet', 'retrait.subtitle':'Receive your money on Waafi',
-    'retrait.steps.title':'1xBet withdrawal instructions',
-    'retrait.step1':'Go to 1xBet → Withdraw', 'retrait.step2':'Choose Waafi as withdrawal method',
-    'retrait.step3':'Enter amount and confirm on 1xBet', 'retrait.step4':'Copy the generated withdrawal code',
-    'retrait.step5':'Fill in the form below with that code',
     'retrait.bet_id':'1xBet ID', 'retrait.amount':'Amount to withdraw (DJF)', 'retrait.waafi_reception':'Your Waafi number',
     'retrait.code':'1xBet withdrawal code', 'retrait.code_hint':'Letters and digits · 4 characters',
     'retrait.payment_instant':'Instant reception',
@@ -724,7 +698,6 @@ function renderHome(app){
     <section class="hero">
       <div class="hero-bg"><div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div></div>
       <div class="container hero-content">
-        <span class="eyebrow">${icon('bolt', 13)} ${t('hero.eyebrow')}</span>
         <div class="hero-title-card">
           <h1>${t('hero.title1')} <span>${t('hero.title2')}</span></h1>
           <p class="sub">${t('hero.sub')}</p>
@@ -880,17 +853,6 @@ function depotContentHtml(){
         </div>
       </div>
 
-      <div class="card" style="margin-bottom:18px;">
-        <h3 style="font-size:1rem;margin-bottom:6px;">${t('depot.steps.title')}</h3>
-        <ol class="steps">
-          <li>${t('depot.step1')}</li>
-          <li>${t('depot.step2')}</li>
-          <li>${t('depot.step3')}</li>
-          <li>${t('depot.step4')}</li>
-          <li>${t('depot.step5')}</li>
-        </ol>
-      </div>
-
       <form id="form-depot" class="card" novalidate>
         <div class="method-card">
           <div class="method-icon wf-badge">WF</div>
@@ -992,17 +954,6 @@ function retraitContentHtml(){
   return `
       <div class="page-header"><h1>📤 ${t('retrait.title')}</h1></div>
       <p class="page-subtitle">${t('retrait.subtitle')}</p>
-
-      <div class="card" style="margin-bottom:18px;">
-        <h3 style="font-size:1rem;margin-bottom:6px;">📋 ${t('retrait.steps.title')}</h3>
-        <ol class="steps">
-          <li>${t('retrait.step1')}</li>
-          <li>${t('retrait.step2')}</li>
-          <li>${t('retrait.step3')}</li>
-          <li>${t('retrait.step4')}</li>
-          <li>${t('retrait.step5')}</li>
-        </ol>
-      </div>
 
       <form id="form-retrait" class="card" novalidate>
         <div class="field">
