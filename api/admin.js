@@ -28,13 +28,34 @@ export default async function handler(req, res) {
 }
 
 /* --------------------------- stats --------------------------- */
+// Djibouti (Africa/Djibouti) est en UTC+3 fixe, sans heure d'été : un
+// simple décalage constant suffit, pas besoin de lib de fuseaux horaires.
+// Sans ça, "aujourd'hui"/"hier" et le bucketing par heure tournaient dans
+// le fuseau du runtime Vercel (UTC), décalés de 3h par rapport au calendrier
+// réel des utilisateurs.
+const DJIBOUTI_OFFSET_MS = 3 * 60 * 60 * 1000;
+
+// Renvoie un Date dont les composants UTC (getUTCFullYear/Month/Date...)
+// représentent l'heure murale de Djibouti au moment réel `d`.
+function toDjiboutiWallClock(d) {
+  return new Date(d.getTime() + DJIBOUTI_OFFSET_MS);
+}
+
+// Instant UTC réel correspondant à minuit heure de Djibouti pour la date
+// (murale) donnée.
+function djiboutiMidnightUTC(wallClock) {
+  const utcMidnight = Date.UTC(wallClock.getUTCFullYear(), wallClock.getUTCMonth(), wallClock.getUTCDate());
+  return new Date(utcMidnight - DJIBOUTI_OFFSET_MS);
+}
+
 function rangeToDates(range) {
   const now = new Date();
-  const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  if (range === 'today') return { from: startOfDay(now), to: now };
+  const wallNow = toDjiboutiWallClock(now);
+  const startOfToday = djiboutiMidnightUTC(wallNow);
+  if (range === 'today') return { from: startOfToday, to: now };
   if (range === 'yesterday') {
-    const y = new Date(now); y.setDate(y.getDate() - 1);
-    return { from: startOfDay(y), to: startOfDay(now) };
+    const wallYesterday = new Date(wallNow.getTime() - 24 * 60 * 60 * 1000);
+    return { from: djiboutiMidnightUTC(wallYesterday), to: startOfToday };
   }
   if (range === '7d') { const from = new Date(now); from.setDate(from.getDate() - 7); return { from, to: now }; }
   if (range === '30d') { const from = new Date(now); from.setDate(from.getDate() - 30); return { from, to: now }; }
@@ -49,52 +70,38 @@ async function handleStats(req, res) {
   const range = req.query.range || 'today';
   const { from, to } = rangeToDates(range);
 
-  let depotQuery = supabaseAdmin.from('depot_orders').select('id,montant,status,created_at');
-  let retraitQuery = supabaseAdmin.from('retrait_orders').select('id,montant,status,created_at');
-  if (from) { depotQuery = depotQuery.gte('created_at', from.toISOString()); retraitQuery = retraitQuery.gte('created_at', from.toISOString()); }
-  if (to) { depotQuery = depotQuery.lte('created_at', to.toISOString()); retraitQuery = retraitQuery.lte('created_at', to.toISOString()); }
+  // Agrégats calculés en SQL (admin_order_stats, voir supabase/schema.sql) :
+  // un ancien reduce() JS sur un select() sans limit() explicite dérivait
+  // silencieusement dès qu'une période dépassait le plafond PostgREST
+  // (1000 lignes par défaut).
+  const { data: rows, error } = await supabaseAdmin.rpc('admin_order_stats', {
+    p_from: from ? from.toISOString() : null,
+    p_to: to.toISOString(),
+  });
+  if (error) throw error;
+  const stats = rows && rows[0] ? rows[0] : {
+    depot_count: 0, retrait_count: 0, total_volume: 0, credited_volume: 0, by_hour: {}, credited_by_day: {},
+  };
 
-  const [{ data: depots, error: dErr }, { data: retraits, error: rErr }] = await Promise.all([depotQuery, retraitQuery]);
-  if (dErr) throw dErr;
-  if (rErr) throw rErr;
-
-  const allOrders = [
-    ...(depots || []).map((o) => ({ ...o, type: 'depot' })),
-    ...(retraits || []).map((o) => ({ ...o, type: 'retrait' })),
-  ];
-
-  const volume = allOrders.reduce((sum, o) => sum + Number(o.montant || 0), 0);
-  const creditedVolume = allOrders.filter((o) => o.status === 'credite').reduce((sum, o) => sum + Number(o.montant || 0), 0);
-
-  const byHourMap = new Map();
-  for (const o of allOrders) {
-    const hour = new Date(o.created_at).getHours();
-    const key = String(hour).padStart(2, '0') + 'h';
-    byHourMap.set(key, (byHourMap.get(key) || 0) + Number(o.montant || 0));
-  }
+  const byHourMap = stats.by_hour || {};
   const byHour = Array.from({ length: 24 }, (_, h) => {
     const key = String(h).padStart(2, '0') + 'h';
-    return { hour: key, volume: byHourMap.get(key) || 0 };
+    return { hour: key, volume: Number(byHourMap[key] || 0) };
   }).filter((h) => h.volume > 0 || range === 'today');
 
-  const profitByDayMap = new Map();
-  for (const o of allOrders) {
-    if (o.status !== 'credite') continue;
-    const day = new Date(o.created_at).toISOString().slice(0, 10);
-    profitByDayMap.set(day, (profitByDayMap.get(day) || 0) + Number(o.montant || 0) * PROFIT_MARGIN_RATE);
-  }
-  const profitByDay = Array.from(profitByDayMap.entries())
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([day, profit]) => ({ day, profit: Math.round(profit) }));
+  const creditedByDay = stats.credited_by_day || {};
+  const profitByDay = Object.keys(creditedByDay)
+    .sort((a, b) => a.localeCompare(b))
+    .map((day) => ({ day, profit: Math.round(Number(creditedByDay[day]) * PROFIT_MARGIN_RATE) }));
 
   const totals = {
-    orders: allOrders.length,
-    depots: (depots || []).length,
-    retraits: (retraits || []).length,
-    volume,
+    orders: Number(stats.depot_count) + Number(stats.retrait_count),
+    depots: Number(stats.depot_count),
+    retraits: Number(stats.retrait_count),
+    volume: Number(stats.total_volume),
   };
   if (caller.role === 'createur') {
-    totals.profit = Math.round(creditedVolume * PROFIT_MARGIN_RATE);
+    totals.profit = Math.round(Number(stats.credited_volume) * PROFIT_MARGIN_RATE);
   }
 
   return res.status(200).json({ totals, byHour, profitByDay });
@@ -130,10 +137,17 @@ async function handleActionOrdre(req, res) {
   } else if (action === 'fraude') {
     await supabaseAdmin.from(table).update({ status: 'fraude' }).eq('id', order_id);
   } else if (action === 'confirmer') {
-    if (type === 'depot' && order.transfer_id) {
+    // Verrou anti-double-crédit : un INSERT qui échoue sur conflit AVANT
+    // tout autre changement d'état, pas une vérification applicative après
+    // coup. Couvrait déjà les dépôts (transfer_id Waafi) ; couvre
+    // maintenant aussi les retraits (code_retrait_1x, tout aussi unique
+    // par transaction côté 1xBet) — sans ça, un double-clic ou une requête
+    // rejouée sur "confirmer" un retrait pouvait déclencher deux payouts.
+    const dedupeKey = type === 'depot' ? order.transfer_id : order.code_retrait_1x;
+    if (dedupeKey) {
       const { error: dedupeError } = await supabaseAdmin
         .from('ordre_traite')
-        .insert({ transfer_id: order.transfer_id, order_id: order.id });
+        .insert({ transfer_id: dedupeKey, order_id: order.id });
       if (dedupeError && dedupeError.code !== '23505') throw dedupeError;
       if (dedupeError && dedupeError.code === '23505') {
         return res.status(200).json({ ok: true, already_processed: true });

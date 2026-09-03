@@ -636,5 +636,59 @@ revoke execute on function public.webhook_retrait_created() from public, anon, a
 revoke execute on function public.webhook_retrait_updated() from public, anon, authenticated;
 
 -- =====================================================================
+-- 6. STATS ADMIN (agrégat SQL)
+-- =====================================================================
+
+-- Agrégat stats admin calculé côté SQL (SUM/COUNT/GROUP BY réels, pas de
+-- reduce() JS sur un select() potentiellement tronqué au plafond
+-- PostgREST). Bucketing heure/jour explicitement en heure de Djibouti
+-- (Africa/Djibouti, UTC+3 fixe, pas d'heure d'été) au lieu du fuseau du
+-- runtime serveur (Vercel = UTC), même convention que gen_order_ref().
+create or replace function public.admin_order_stats(p_from timestamptz, p_to timestamptz)
+returns table (
+  depot_count      bigint,
+  retrait_count    bigint,
+  total_volume     numeric,
+  credited_volume  numeric,
+  by_hour          jsonb,
+  credited_by_day  jsonb
+)
+language sql
+stable
+set search_path = public
+as $$
+  with orders as (
+    select montant, status, created_at, 'depot'::text as type
+      from public.depot_orders
+      where (p_from is null or created_at >= p_from) and created_at <= p_to
+    union all
+    select montant, status, created_at, 'retrait'::text as type
+      from public.retrait_orders
+      where (p_from is null or created_at >= p_from) and created_at <= p_to
+  ),
+  hour_agg as (
+    select to_char(created_at at time zone 'Africa/Djibouti', 'HH24') || 'h' as hour_key,
+           sum(montant) as vol
+    from orders
+    group by 1
+  ),
+  day_agg as (
+    select (created_at at time zone 'Africa/Djibouti')::date as day_key, sum(montant) as vol
+    from orders
+    where status = 'credite'
+    group by 1
+  )
+  select
+    coalesce((select count(*) from orders where type = 'depot'), 0),
+    coalesce((select count(*) from orders where type = 'retrait'), 0),
+    coalesce((select sum(montant) from orders), 0),
+    coalesce((select sum(montant) from orders where status = 'credite'), 0),
+    coalesce((select jsonb_object_agg(hour_key, vol) from hour_agg), '{}'::jsonb),
+    coalesce((select jsonb_object_agg(day_key::text, vol) from day_agg), '{}'::jsonb);
+$$;
+
+grant execute on function public.admin_order_stats(timestamptz, timestamptz) to service_role;
+
+-- =====================================================================
 -- Fin du schéma
 -- =====================================================================
