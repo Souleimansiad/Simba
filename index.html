@@ -120,8 +120,8 @@ header.site{
 .btn:active{transform:scale(.97);}
 .btn:focus-visible{outline:none; box-shadow:0 0 0 3px var(--bg), 0 0 0 5px var(--primary);}
 .btn-primary{
-  background:linear-gradient(120deg,var(--primary),var(--primary-2),var(--accent),var(--primary-2));
-  background-size:280% 100%; background-position:0% 50%;
+  background:linear-gradient(120deg,var(--primary),var(--primary-2),var(--primary));
+  background-size:220% 100%; background-position:0% 50%;
   color:#ffffff; box-shadow:0 2px 6px rgba(2,60,90,.18), 0 10px 24px -10px rgba(56,189,248,.55);
 }
 .btn-primary::after{
@@ -172,9 +172,9 @@ header.site{
 .hero{position:relative; overflow:hidden; padding:36px 0 20px;}
 .hero-bg{position:absolute; inset:0; z-index:0; overflow:hidden;}
 .orb{position:absolute; border-radius:50%; filter:blur(80px);}
-.orb-1{width:420px; height:420px; background:var(--primary); opacity:.5; top:-160px; left:-120px;}
-.orb-2{width:360px; height:360px; background:var(--accent); opacity:.4; top:40px; right:-140px;}
-.orb-3{width:300px; height:300px; background:var(--primary-2); opacity:.32; top:60px; left:34%;}
+.orb-1{width:420px; height:420px; background:var(--primary); opacity:.45; top:-160px; left:-120px;}
+.orb-2{width:360px; height:360px; background:var(--primary); opacity:.3; top:40px; right:-140px;}
+.orb-3{width:300px; height:300px; background:var(--primary-2); opacity:.3; top:60px; left:34%;}
 @media (prefers-reduced-motion:no-preference){
   .orb-1{animation:float-a 12s ease-in-out infinite;}
   .orb-2{animation:float-b 15s ease-in-out infinite;}
