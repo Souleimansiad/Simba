@@ -248,7 +248,10 @@ footer.site{border-top:1px solid var(--card-border); padding:18px 0; text-align:
 
 /* ============================= FORM PAGES ============================= */
 .page-header{display:flex; align-items:center; gap:12px; padding:12px 0 4px;}
-.back-btn{width:38px; height:38px; border-radius:10px; background:var(--card-bg); border:1px solid var(--card-border); display:flex; align-items:center; justify-content:center; text-decoration:none; color:var(--text); font-size:1.1rem;}
+.back-btn{width:38px; height:38px; border-radius:10px; background:var(--card-bg); border:1px solid var(--card-border); display:flex; align-items:center; justify-content:center; text-decoration:none; color:var(--text); font-size:1.1rem; transition:transform .25s var(--ease-out), border-color .2s ease, box-shadow .25s ease, color .2s ease;}
+.back-btn:hover{border-color:var(--primary); color:var(--primary); transform:translateY(-2px); box-shadow:var(--shadow);}
+.back-btn:active{transform:scale(.94);}
+.back-btn:focus-visible{outline:none; box-shadow:0 0 0 3px var(--bg), 0 0 0 5px var(--primary);}
 .page-header h1{font-size:1.2rem; display:flex; align-items:center; gap:8px;}
 .page-subtitle{color:var(--text-dim); font-size:.82rem; margin:-2px 0 12px 2px;}
 .form-page{max-width:560px; margin:0 auto; padding-bottom:36px;}
@@ -362,9 +365,9 @@ footer.site{border-top:1px solid var(--card-border); padding:18px 0; text-align:
 /* ============================= ADMIN ============================= */
 .admin-shell{display:flex; min-height:calc(100vh - 70px);}
 .admin-side{width:220px; flex:0 0 auto; border-right:1px solid var(--card-border); padding:18px 10px; background:var(--bg-alt);}
-.admin-nav-btn{display:flex; align-items:center; gap:10px; width:100%; padding:11px 14px; border-radius:var(--radius-s); background:none; border:none; color:var(--text-dim); font-weight:600; font-size:.88rem; margin-bottom:4px; text-align:left; transition:background .2s ease, color .2s ease, transform .12s ease;}
+.admin-nav-btn{display:flex; align-items:center; gap:10px; width:100%; padding:11px 14px; border-radius:var(--radius-s); background:none; border:none; color:var(--text-dim); font-weight:600; font-size:.88rem; margin-bottom:4px; text-align:left; transition:background .25s var(--ease-out), color .2s ease, transform .12s ease;}
 .admin-nav-btn.active{background:linear-gradient(135deg,var(--primary),var(--primary-2)); color:#ffffff; box-shadow:0 6px 16px -6px rgba(2,132,199,.5);}
-.admin-nav-btn:hover{color:var(--text);}
+.admin-nav-btn:hover:not(.active){color:var(--text); background:var(--card-bg-solid);}
 .admin-nav-btn:active{transform:scale(.97);}
 .admin-main{flex:1; padding:24px; overflow-x:auto;}
 @media (max-width:800px){.admin-shell{flex-direction:column;} .admin-side{width:100%; display:flex; overflow-x:auto; gap:6px; border-right:none; border-bottom:1px solid var(--card-border);} .admin-nav-btn{white-space:nowrap;}}
@@ -376,12 +379,15 @@ footer.site{border-top:1px solid var(--card-border); padding:18px 0; text-align:
 .chart-card{padding:18px; height:280px;}
 .chart-card canvas{max-height:220px;}
 .filter-chips{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;}
-.chip{padding:7px 14px; border-radius:999px; font-size:.78rem; font-weight:600; border:1px solid var(--card-border); background:var(--card-bg); color:var(--text-dim); transition:background .2s ease, color .2s ease, transform .12s ease;}
+.chip{padding:7px 14px; border-radius:999px; font-size:.78rem; font-weight:600; border:1px solid var(--card-border); background:var(--card-bg); color:var(--text-dim); transition:background .25s var(--ease-out), color .2s ease, border-color .2s ease, transform .12s ease;}
+.chip:hover:not(.active){border-color:var(--primary); color:var(--accent);}
 .chip.active{background:linear-gradient(135deg,var(--primary),var(--primary-2)); color:#fff; border-color:var(--primary);}
 .chip:active{transform:scale(.94);}
 table.data-table{width:100%; border-collapse:collapse; font-size:.85rem;}
 table.data-table th{text-align:left; padding:10px 12px; color:var(--text-faint); font-size:.72rem; text-transform:uppercase; letter-spacing:.03em; border-bottom:1px solid var(--card-border);}
 table.data-table td{padding:12px; border-bottom:1px solid var(--card-border); vertical-align:middle;}
+table.data-table tbody tr{transition:background .2s ease;}
+table.data-table tbody tr:hover td{background:var(--bg-alt);}
 table.data-table tr.flash-new{animation:flashRow 1.6s ease;}
 @keyframes flashRow{0%{background:rgba(56,189,248,.25);}100%{background:transparent;}}
 .row-actions{display:flex; gap:6px;}
