@@ -3,15 +3,41 @@
 // DJF 50 from Souleiman Siad Soubaneh(77626050), Your Balance is: DJF 6,444.7."
 
 export function parseWaafiText(text) {
-  if (!text) return { transferId: null, montant: null, senderNumber: null };
+  if (!text) return { transferId: null, montant: null, senderName: null, senderNumber: null, dateTime: null };
   const idMatch = text.match(/(?:trx|transaction|ref(?:erence)?|id)[\s.:#]*([A-Za-z0-9]{6,})/i);
   const amountMatch = text.match(/(?:djf|amount|montant)[^\d]{0,6}([\d,.]+)/i) || text.match(/([\d,.]{3,})\s*(?:djf)/i);
-  const senderMatch = text.match(/from\s+.*?\((\d{6,10})\)/i) || text.match(/exp[ée]diteur\D{0,10}(\d{6,10})/i);
+  const senderMatch = text.match(/from\s+(.*?)\s*\((\d{6,10})\)/i);
+  const senderNumberFallback = senderMatch ? null : text.match(/exp[ée]diteur\D{0,10}(\d{6,10})/i);
   return {
     transferId: idMatch ? idMatch[1] : null,
     montant: amountMatch ? Number(amountMatch[1].replace(/[,.](?=\d{3}\b)/g, '').replace(',', '.')) : null,
-    senderNumber: senderMatch ? senderMatch[1] : null,
+    senderName: senderMatch && senderMatch[1] ? senderMatch[1].trim() : null,
+    senderNumber: senderMatch ? senderMatch[2] : senderNumberFallback ? senderNumberFallback[1] : null,
+    dateTime: parseWaafiDate(text),
   };
+}
+
+// Date/heure éventuellement présente dans le texte (ex: "06/10/2026 14:35"
+// ou "2026-10-06 14:35"), interprétée en heure de Djibouti (UTC+3 fixe).
+// Renvoie un ISO UTC, ou null si le texte ne contient pas de date.
+function parseWaafiDate(text) {
+  let m = text.match(/(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})[ ,T]+(\d{1,2})[:h](\d{2})/);
+  let y, mo, d, h, mi;
+  if (m) [, d, mo, y, h, mi] = m;
+  else {
+    m = text.match(/(\d{4})-(\d{1,2})-(\d{1,2})[ T]+(\d{1,2}):(\d{2})/);
+    if (!m) return null;
+    [, y, mo, d, h, mi] = m;
+  }
+  const ms = Date.UTC(Number(y), Number(mo) - 1, Number(d), Number(h) - 3, Number(mi));
+  return Number.isNaN(ms) ? null : new Date(ms).toISOString();
+}
+
+// Affichage "JJ/MM/AAAA HH:MM" en heure de Djibouti.
+export function formatDjibouti(iso) {
+  const w = new Date(new Date(iso).getTime() + 3 * 60 * 60 * 1000);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${p(w.getUTCDate())}/${p(w.getUTCMonth() + 1)}/${w.getUTCFullYear()} ${p(w.getUTCHours())}:${p(w.getUTCMinutes())}`;
 }
 
 function normalizePhone(num) {

@@ -1,11 +1,11 @@
 import { supabaseAdmin } from './_lib/supabase.js';
 import { sendTelegramAdmin } from './_lib/telegram.js';
-import { parseWaafiText, verifyDepotMatch } from './_lib/waafiMatch.js';
+import { parseWaafiText, verifyDepotMatch, formatDjibouti } from './_lib/waafiMatch.js';
 import { creditDepot, flagMismatch } from './_lib/depotCredit.js';
 
 // Reçoit les SMS/notifications Waafi relayés par MacroDroid (sur le téléphone
 // recevant les paiements). Accepte plusieurs formats de body JSON :
-// { text | message | notification, transfer_id?, montant?, sender_number? }
+// { not_title?, text | message | notification, transfer_id?, montant?, sender_number? }
 // — le texte brut est parsé si ces champs ne sont pas fournis explicitement.
 // Le secret (SMS_WEBHOOK_SECRET) peut être envoyé soit en header
 // "x-sms-secret", soit en champ "secret" du body JSON (MacroDroid ne
@@ -26,24 +26,40 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Secret invalide' });
   }
 
+  const title = body.not_title || body.title || null;
   const rawText = body.text || body.message || body.notification;
   const parsed = parseWaafiText(rawText);
   const transferId = body.transfer_id || parsed.transferId;
   const montant = body.montant != null ? Number(body.montant) : parsed.montant;
   const senderNumber = body.sender_number || parsed.senderNumber;
+  const senderName = parsed.senderName;
+  // Date du texte Waafi si elle y figure, sinon heure de réception.
+  const paidAt = parsed.dateTime || new Date().toISOString();
+  const extracted = {
+    titre: title,
+    transfer_id: transferId,
+    nom_expediteur: senderName,
+    numero_expediteur: senderNumber,
+    montant,
+    date_heure: formatDjibouti(paidAt),
+  };
 
   try {
-    await supabaseAdmin.from('waafi_notifications').insert({
-      type: 'sms_received',
-      message: rawText || null,
-      transfer_id: transferId,
-      montant,
-      sender_number: senderNumber,
+    const baseRow = { type: 'sms_received', message: rawText || null, transfer_id: transferId, montant, sender_number: senderNumber };
+    const { error: insertErr } = await supabaseAdmin.from('waafi_notifications').insert({
+      ...baseRow, title, sender_name: senderName, paid_at: paidAt,
     });
+    // Colonnes title/sender_name/paid_at absentes tant que la migration
+    // de schema.sql n'est pas appliquée : on stocke quand même le SMS
+    // (indispensable pour hooks/depot-created.js) sans ces champs.
+    if (insertErr) {
+      console.error('[sms-webhook] insert', insertErr);
+      await supabaseAdmin.from('waafi_notifications').insert(baseRow);
+    }
 
     if (!transferId) {
       await sendTelegramAdmin(`⚠️ SMS Waafi reçu sans Transfer ID détecté : "${(rawText || '').slice(0, 200)}"`);
-      return res.status(200).json({ ok: true, matched: false, reason: 'no_transfer_id' });
+      return res.status(200).json({ ok: true, matched: false, reason: 'no_transfer_id', extracted });
     }
 
     const { data: order } = await supabaseAdmin
@@ -60,22 +76,24 @@ export default async function handler(req, res) {
       // retrouvera ce SMS dès la création de l'ordre).
       await sendTelegramAdmin(
         `📩 SMS Waafi reçu — Paiement enregistré\n\n` +
+        `Titre: ${title ?? '—'}\n` +
         `Transfer-ID: ${transferId}\n` +
         `Montant: ${montant ?? '?'} DJF\n` +
-        `Expéditeur: ${senderNumber ?? '?'}\n\n` +
+        `Expéditeur: ${senderName ?? '?'} (${senderNumber ?? '?'})\n` +
+        `Date: ${extracted.date_heure}\n\n` +
         `✅ En attente de l'ordre client — confirmation automatique dès soumission.`
       );
-      return res.status(200).json({ ok: true, matched: false, reason: 'order_not_found' });
+      return res.status(200).json({ ok: true, matched: false, reason: 'order_not_found', extracted });
     }
 
     const verif = verifyDepotMatch(order, { montant, sender_number: senderNumber });
     if (!verif.ok) {
       await flagMismatch(order, verif.reasons);
-      return res.status(200).json({ ok: true, matched: true, confirmed: false, reasons: verif.reasons });
+      return res.status(200).json({ ok: true, matched: true, confirmed: false, reasons: verif.reasons, extracted });
     }
 
     const result = await creditDepot(order, transferId);
-    return res.status(200).json({ ok: true, matched: true, confirmed: true, ...result });
+    return res.status(200).json({ ok: true, matched: true, confirmed: true, ...result, extracted });
   } catch (err) {
     console.error('[sms-webhook]', err);
     return res.status(500).json({ error: err.message });

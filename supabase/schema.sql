@@ -143,6 +143,10 @@ create table if not exists public.waafi_notifications (
   created_at     timestamptz not null default now()
 );
 alter table public.waafi_notifications add column if not exists sender_number text;
+-- Champs extraits de la notification Waafi relayée par MacroDroid.
+alter table public.waafi_notifications add column if not exists title text;
+alter table public.waafi_notifications add column if not exists sender_name text;
+alter table public.waafi_notifications add column if not exists paid_at timestamptz;
 
 -- Déduplication anti-double-crédit : transfer_id est la clé primaire.
 create table if not exists public.ordre_traite (
