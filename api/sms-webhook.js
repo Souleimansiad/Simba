@@ -28,6 +28,14 @@ export default async function handler(req, res) {
 
   const title = body.not_title || body.title || null;
   const rawText = body.text || body.message || body.notification;
+
+  // MacroDroid relaie aussi les SMS/notifications ordinaires (titre = un
+  // numéro ou un contact) : seuls ceux de Waafi sont traités, le reste est
+  // ignoré sans être stocké ni alerté. Sans titre, on se rabat sur le texte.
+  if (!/waafi/i.test(title || rawText || '')) {
+    return res.status(200).json({ ok: true, ignored: true, reason: 'not_waafi', titre: title });
+  }
+
   const parsed = parseWaafiText(rawText);
   const transferId = body.transfer_id || parsed.transferId;
   const montant = body.montant != null ? Number(body.montant) : parsed.montant;
