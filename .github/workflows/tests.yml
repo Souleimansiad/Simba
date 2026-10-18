@@ -1,0 +1,26 @@
+name: Tests
+
+# Lance les tests de non-régression (npm test) à chaque push sur la branche de
+# développement et sur la branche de production. Aucun appel réseau réel :
+# Supabase, MobCash, WhatsApp, Telegram et OpenRouter sont simulés.
+on:
+  push:
+    branches:
+      - claude/new-session-2tinvq
+      - claude/new-session-mg7695
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm test

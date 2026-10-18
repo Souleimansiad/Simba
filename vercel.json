@@ -18,6 +18,15 @@
   "functions": {
     "api/hooks/depot-created.js": {
       "maxDuration": 30
+    },
+    "api/sms-webhook.js": {
+      "maxDuration": 30
+    },
+    "api/admin-bot.js": {
+      "maxDuration": 30
+    },
+    "api/admin.js": {
+      "maxDuration": 30
     }
   }
 }
