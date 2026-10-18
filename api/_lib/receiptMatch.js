@@ -14,8 +14,9 @@ import { normalizePhone } from './waafiMatch.js';
 // comparé au compte de la boutique, et la date à l'heure de réception du SMS.
 
 export const SHOP_NUMBER = (process.env.WAAFI_NUMBER || '77626050').trim();
-// Waafi peut afficher le compte sous un nom ou un autre : on accepte chacun.
-export const SHOP_NAMES = (process.env.WAAFI_DEST_NAMES || 'Souleiman Siad Soubaneh,Siad Soubaneh Kawaleh')
+// Nom du compte Waafi qui reçoit les paiements (modifiable sans toucher au code
+// via WAAFI_DEST_NAMES, plusieurs noms séparés par des virgules).
+export const SHOP_NAMES = (process.env.WAAFI_DEST_NAMES || 'Souleiman Siad Soubaneh')
   .split(',').map((n) => n.trim()).filter(Boolean);
 const DATE_TOLERANCE_MS = 10 * 60 * 1000;
 const CANDIDATE_WINDOW_MS = 15 * 60 * 1000;

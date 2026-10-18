@@ -26,7 +26,7 @@ Plateforme d'échange Waafi ⇄ 1xBet : dépôt et retrait en quelques minutes.
 | `SUPABASE_WEBHOOK_SECRET`, `SMS_WEBHOOK_SECRET`, `TELEGRAM_WEBHOOK_SECRET`, `CRON_SECRET` | Secrets optionnels de vérification des webhooks |
 | `OPENROUTER_API_KEY` | Clé [OpenRouter](https://openrouter.ai) : lecture des captures de paiement par IA. Sans elle, les captures sont seulement vérifiées à la main par un agent |
 | `OPENROUTER_MODEL` | Modèle de **vision** OpenRouter (défaut `google/gemini-2.5-flash-lite`) |
-| `WAAFI_NUMBER`, `WAAFI_DEST_NAMES` | Optionnels : compte Waafi qui reçoit les paiements (défaut `77626050`) et noms acceptés pour le destinataire, séparés par des virgules |
+| `WAAFI_NUMBER`, `WAAFI_DEST_NAMES` | Optionnels : compte Waafi qui reçoit les paiements (défaut `77626050`) et nom(s) du compte, séparés par des virgules (défaut `Souleiman Siad Soubaneh`) |
 
 3. Configurer les **Database Webhooks** Supabase vers `/api/hooks/depot-created`, `/api/hooks/depot-updated`, `/api/hooks/retrait-created`, `/api/hooks/retrait-updated`.
 4. Configurer le webhook Telegram des bots vers `/api/admin-bot` et `/api/support-client`.
