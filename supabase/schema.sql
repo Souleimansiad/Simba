@@ -109,9 +109,9 @@ alter table public.depot_orders add column if not exists last_error text;
 -- depuis le SMS Waafi à la confirmation.
 alter table public.depot_orders alter column numero_waafi_expediteur drop not null;
 alter table public.depot_orders add column if not exists receipt_path text;
--- Champs lus sur la capture par le navigateur (kind app|ussd, montant, n°/nom
--- expéditeur et destinataire, date, Transfer ID pour un SMS USSD) : comparés
--- au SMS Waafi par api/_lib/receiptMatch.js.
+-- Champs lus sur la capture par l'IA, côté serveur (kind app|ussd, montant,
+-- n°/nom expéditeur et destinataire, date, Transfer ID pour un SMS USSD) :
+-- comparés au SMS Waafi par api/_lib/receiptMatch.js.
 alter table public.depot_orders add column if not exists receipt_data jsonb;
 
 create table if not exists public.retrait_orders (
@@ -526,15 +526,16 @@ create policy receipts_select_staff on storage.objects
 
 -- Création d'un dépôt avec capture. Le chemin doit avoir le format imposé
 -- ci-dessus (évite d'injecter du HTML via un nom de fichier dans le panneau
--- admin) et pointer vers une capture réellement déposée.
+-- admin) et pointer vers une capture réellement déposée. Le client ne fournit
+-- NI Transfer ID NI données lues : receipt_data et transfer_id sont écrits
+-- uniquement par le serveur (api/hooks/depot-created.js, lecture IA de
+-- l'image stockée), donc non falsifiables par le client.
 create or replace function public.submit_depot_order(
   p_montant numeric,
   p_id_bet1x text,
   p_whatsapp text,
   p_receipt_path text,
-  p_transfer_id text default null,
-  p_lang text default 'fr',
-  p_receipt_data jsonb default null
+  p_lang text default 'fr'
 ) returns text
 language plpgsql
 security definer
@@ -549,21 +550,15 @@ begin
     raise exception 'Capture de paiement manquante ou invalide';
   end if;
 
-  insert into public.depot_orders (montant, id_bet1x, whatsapp, receipt_path, transfer_id, lang, receipt_data)
-  values (
-    p_montant, p_id_bet1x, p_whatsapp, p_receipt_path,
-    nullif(regexp_replace(coalesce(p_transfer_id, ''), '[^A-Za-z0-9]', '', 'g'), ''),
-    coalesce(p_lang, 'fr'),
-    case when p_receipt_data is not null and jsonb_typeof(p_receipt_data) = 'object'
-              and length(p_receipt_data::text) <= 2000 then p_receipt_data end
-  )
+  insert into public.depot_orders (montant, id_bet1x, whatsapp, receipt_path, lang)
+  values (p_montant, p_id_bet1x, p_whatsapp, p_receipt_path, coalesce(p_lang, 'fr'))
   returning id into v_id;
   return v_id;
 end;
 $$;
 
-revoke all on function public.submit_depot_order(numeric, text, text, text, text, text, jsonb) from public;
-grant execute on function public.submit_depot_order(numeric, text, text, text, text, text, jsonb) to anon, authenticated;
+revoke all on function public.submit_depot_order(numeric, text, text, text, text) from public;
+grant execute on function public.submit_depot_order(numeric, text, text, text, text) to anon, authenticated;
 
 -- =====================================================================
 -- 7. REALTIME

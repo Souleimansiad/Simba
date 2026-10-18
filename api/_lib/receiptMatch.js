@@ -176,3 +176,20 @@ export async function findOrderForSms(sms) {
   if (good.length > 1) return { status: 'ambiguous', count: good.length };
   return { status: 'none' };
 }
+
+/** Résumé lisible (une ligne) de ce qui a été lu sur la capture, pour Telegram. */
+export function describeReceipt(r) {
+  if (!r || !r.kind) return '⚠️ non lue — vérifier la capture avant de confirmer';
+  const when = r.date_iso
+    ? new Date(r.date_iso).toLocaleString('fr-FR', { timeZone: 'Africa/Djibouti', dateStyle: 'short', timeStyle: 'short' })
+    : null;
+  const esc = (v) => String(v).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  return [
+    r.kind === 'ussd' ? 'SMS USSD' : 'reçu app Waafi',
+    r.amount != null ? `${r.amount} DJF` : null,
+    r.transfer_id ? `Transfer-ID ${r.transfer_id}` : null,
+    r.sender_number || r.sender_name ? `de ${esc([r.sender_name, r.sender_number].filter(Boolean).join(' '))}` : null,
+    r.dest_number || r.dest_name ? `vers ${esc([r.dest_name, r.dest_number].filter(Boolean).join(' '))}` : null,
+    when,
+  ].filter(Boolean).join(' · ');
+}

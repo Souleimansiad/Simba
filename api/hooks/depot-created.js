@@ -5,7 +5,8 @@ import { notifyAgentsWhatsApp, sendWhatsApp } from '../_lib/whatsapp.js';
 import { verifyDepotMatch } from '../_lib/waafiMatch.js';
 import { creditDepot, flagMismatch } from '../_lib/depotCredit.js';
 import { receiptSignedUrl } from '../_lib/receipts.js';
-import { failedReasons, findSmsForOrder } from '../_lib/receiptMatch.js';
+import { describeReceipt, failedReasons, findSmsForOrder } from '../_lib/receiptMatch.js';
+import { extractReceiptForOrder } from '../_lib/receiptAI.js';
 
 // Configurer ce endpoint comme Database Webhook Supabase :
 // INSERT on public.depot_orders -> POST https://<domain>/api/hooks/depot-created
@@ -22,6 +23,22 @@ export default async function handler(req, res) {
   if (!record || !record.id) return res.status(400).json({ error: 'Payload invalide' });
 
   try {
+    // Lecture de la capture par l'IA, côté serveur et depuis l'image stockée
+    // (le client ne peut donc pas falsifier les champs). Faite avant le score
+    // de fraude, qui dépend de ce qui a pu être lu. Un SMS USSD fournit aussi
+    // le Transfer ID de l'ordre. Échec ou format inconnu : receipt_data reste
+    // vide et l'ordre part en vérification manuelle.
+    if (record.receipt_path && !record.receipt_data) {
+      const data = await extractReceiptForOrder(record.receipt_path);
+      if (data) {
+        const patch = { receipt_data: data };
+        if (data.kind === 'ussd' && data.transfer_id) patch.transfer_id = data.transfer_id;
+        await supabaseAdmin.from('depot_orders').update(patch).eq('id', record.id);
+        record.receipt_data = data;
+        if (patch.transfer_id) record.transfer_id = patch.transfer_id;
+      }
+    }
+
     let { score, reasons, isFraud } = computeFraudScore(record, 'depot');
 
     // Ordre suspect : même Transfer ID + même montant soumis à nouveau en
@@ -75,9 +92,9 @@ export default async function handler(req, res) {
         `📥 Nouvel ordre Dépôt — #${record.id}\n\n` +
         `Montant : ${record.montant} DJF\n` +
         `ID 1xBet : ${record.id_bet1x}\n` +
-        (record.transfer_id
-          ? `Transfer-ID (lu sur la capture) : ${record.transfer_id}\n`
-          : `⚠️ Transfer-ID non lu sur la capture — vérifier la capture avant de confirmer\n`) +
+        (record.receipt_path
+          ? `Capture lue : ${describeReceipt(record.receipt_data)}\n`
+          : `Transfer-ID : ${record.transfer_id || '—'}\n`) +
         (capture ? `🧾 <a href="${capture.replace(/&/g, '&amp;')}">Voir la capture de paiement</a>\n` : '') +
         `\n⏳ Vérification en cours...`
       );
@@ -97,7 +114,15 @@ export default async function handler(req, res) {
     // ordre est créé. On le cherche tout de suite au lieu d'attendre un SMS
     // qui ne viendra plus (il est déjà arrivé et reparti).
     let confirmation = null;
-    if (!isFraud && record.receipt_data && record.receipt_data.kind) {
+    // Montant saisi ≠ montant payé (faute de frappe probable) : on ne crédite
+    // rien automatiquement et on prévient le client avec la raison exacte.
+    const rd = record.receipt_data;
+    const amountMismatch = !!(rd && rd.amount != null && Math.abs(Number(rd.amount) - Number(record.montant)) > 0.01);
+    if (!isFraud && amountMismatch) {
+      const reasons = [`montant saisi ${record.montant} DJF différent du montant de la capture ${rd.amount} DJF`];
+      await flagMismatch(record, reasons);
+      confirmation = { confirmed: false, reasons };
+    } else if (!isFraud && record.receipt_data && record.receipt_data.kind) {
       // Ordre avec capture : on cherche le SMS qui concorde (6/6 pour un reçu
       // de l'app Waafi, 5/5 pour un SMS d'opérateur USSD). Si le SMS n'est pas
       // encore arrivé, hooks/sms-webhook.js fera le rapprochement à sa réception.

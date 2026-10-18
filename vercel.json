@@ -1,6 +1,9 @@
 {
   "rewrites": [
-    { "source": "/admin", "destination": "/index.html" }
+    {
+      "source": "/admin",
+      "destination": "/index.html"
+    }
   ],
   "crons": [
     {
@@ -11,5 +14,10 @@
       "path": "/api/purge-ordres-anciens",
       "schedule": "0 3 * * *"
     }
-  ]
+  ],
+  "functions": {
+    "api/hooks/depot-created.js": {
+      "maxDuration": 30
+    }
+  }
 }

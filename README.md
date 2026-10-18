@@ -24,11 +24,25 @@ Plateforme d'échange Waafi ⇄ 1xBet : dépôt et retrait en quelques minutes.
 | `WHATSAPP_AGENT_NUMBERS` | Numéros WhatsApp des agents à notifier (liste séparée par des virgules, optionnel) |
 | `MOBCASH_CASHBOX_CODE`, `MOBCASH_LOGIN`, `MOBCASH_PASSWORD` | Identifiants API MobCash APP2APP (crédit/retrait 1xBet) — cashboxCode, login et mot de passe du caissier fournis par MobCash |
 | `SUPABASE_WEBHOOK_SECRET`, `SMS_WEBHOOK_SECRET`, `TELEGRAM_WEBHOOK_SECRET`, `CRON_SECRET` | Secrets optionnels de vérification des webhooks |
+| `OPENROUTER_API_KEY` | Clé [OpenRouter](https://openrouter.ai) : lecture des captures de paiement par IA. Sans elle, les captures sont seulement vérifiées à la main par un agent |
+| `OPENROUTER_MODEL` | Modèle de **vision** OpenRouter (défaut `google/gemini-2.5-flash-lite`) |
+| `WAAFI_NUMBER`, `WAAFI_DEST_NAMES` | Optionnels : compte Waafi qui reçoit les paiements (défaut `77626050`) et noms acceptés pour le destinataire, séparés par des virgules |
 
 3. Configurer les **Database Webhooks** Supabase vers `/api/hooks/depot-created`, `/api/hooks/depot-updated`, `/api/hooks/retrait-created`, `/api/hooks/retrait-updated`.
 4. Configurer le webhook Telegram des bots vers `/api/admin-bot` et `/api/support-client`.
 
 Sans ces variables, le site fonctionne déjà (dépôt/retrait/suivi), seules les notifications et le crédit automatique MobCash restent inactifs.
+
+## Dépôt par capture de paiement
+
+Le client ne saisit plus de Transfer ID : il joint la capture de son paiement Waafi (reçu de l'app, ou SMS de l'opérateur s'il a payé par code USSD).
+
+1. L'image est stockée dans le bucket privé `receipts` (Supabase Storage).
+2. `api/hooks/depot-created.js` la lit **côté serveur** avec un modèle de vision (OpenRouter) → `depot_orders.receipt_data`.
+3. `api/_lib/receiptMatch.js` la compare au SMS « WAAFI SAS » relayé par MacroDroid :
+   - reçu de l'app Waafi : montant, n° + nom expéditeur, n° + nom destinataire, date → **6/6** ;
+   - SMS USSD : Transfer-ID, montant, n° + nom destinataire, date → **5/5**.
+4. Tous les critères concordent → crédit automatique ; sinon vérification manuelle (capture visible dans Telegram et le panneau admin).
 
 ## Mode manuel (en attendant l'accès à l'API MobCash)
 
