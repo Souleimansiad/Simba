@@ -5,6 +5,7 @@ import { notifyAgentsWhatsApp, sendWhatsApp } from '../_lib/whatsapp.js';
 import { verifyDepotMatch } from '../_lib/waafiMatch.js';
 import { creditDepot, flagMismatch } from '../_lib/depotCredit.js';
 import { receiptSignedUrl } from '../_lib/receipts.js';
+import { failedReasons, findSmsForOrder } from '../_lib/receiptMatch.js';
 
 // Configurer ce endpoint comme Database Webhook Supabase :
 // INSERT on public.depot_orders -> POST https://<domain>/api/hooks/depot-created
@@ -96,7 +97,24 @@ export default async function handler(req, res) {
     // ordre est créé. On le cherche tout de suite au lieu d'attendre un SMS
     // qui ne viendra plus (il est déjà arrivé et reparti).
     let confirmation = null;
-    if (!isFraud && record.transfer_id) {
+    if (!isFraud && record.receipt_data && record.receipt_data.kind) {
+      // Ordre avec capture : on cherche le SMS qui concorde (6/6 pour un reçu
+      // de l'app Waafi, 5/5 pour un SMS d'opérateur USSD). Si le SMS n'est pas
+      // encore arrivé, hooks/sms-webhook.js fera le rapprochement à sa réception.
+      const found = await findSmsForOrder(record);
+      if (found.status === 'matched') {
+        await supabaseAdmin.from('depot_orders').update({ transfer_id: found.sms.transfer_id }).eq('id', record.id);
+        confirmation = await creditDepot({ ...record, transfer_id: found.sms.transfer_id }, found.sms.transfer_id, found.sms);
+        confirmation = { ...confirmation, criteria: `${found.evaluation.passed}/${found.evaluation.total}` };
+      } else if (found.status === 'mismatch') {
+        const reasons = failedReasons(found.evaluation);
+        await flagMismatch(record, reasons);
+        confirmation = { confirmed: false, reasons };
+      } else if (found.status === 'ambiguous') {
+        await sendTelegramAdmin(`⚠️ Dépôt #${record.id} — ${found.count} SMS Waafi correspondent à la capture : rapprochement automatique impossible, confirmer à la main.`);
+        confirmation = { confirmed: false, ambiguous: found.count };
+      }
+    } else if (!isFraud && record.transfer_id) {
       const { data: sms } = await supabaseAdmin
         .from('waafi_notifications')
         .select('*')

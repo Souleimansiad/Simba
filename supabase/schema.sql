@@ -80,6 +80,7 @@ create table if not exists public.depot_orders (
   id_bet1x                  text not null check (char_length(id_bet1x) > 0),
   numero_waafi_expediteur   text,
   receipt_path              text,
+  receipt_data              jsonb,
   transfer_id               text,
   whatsapp                  text not null,
   turnstile_token           text,
@@ -108,6 +109,10 @@ alter table public.depot_orders add column if not exists last_error text;
 -- depuis le SMS Waafi à la confirmation.
 alter table public.depot_orders alter column numero_waafi_expediteur drop not null;
 alter table public.depot_orders add column if not exists receipt_path text;
+-- Champs lus sur la capture par le navigateur (kind app|ussd, montant, n°/nom
+-- expéditeur et destinataire, date, Transfer ID pour un SMS USSD) : comparés
+-- au SMS Waafi par api/_lib/receiptMatch.js.
+alter table public.depot_orders add column if not exists receipt_data jsonb;
 
 create table if not exists public.retrait_orders (
   id                        text primary key default public.gen_order_ref(),
@@ -528,7 +533,8 @@ create or replace function public.submit_depot_order(
   p_whatsapp text,
   p_receipt_path text,
   p_transfer_id text default null,
-  p_lang text default 'fr'
+  p_lang text default 'fr',
+  p_receipt_data jsonb default null
 ) returns text
 language plpgsql
 security definer
@@ -543,19 +549,21 @@ begin
     raise exception 'Capture de paiement manquante ou invalide';
   end if;
 
-  insert into public.depot_orders (montant, id_bet1x, whatsapp, receipt_path, transfer_id, lang)
+  insert into public.depot_orders (montant, id_bet1x, whatsapp, receipt_path, transfer_id, lang, receipt_data)
   values (
     p_montant, p_id_bet1x, p_whatsapp, p_receipt_path,
     nullif(regexp_replace(coalesce(p_transfer_id, ''), '[^A-Za-z0-9]', '', 'g'), ''),
-    coalesce(p_lang, 'fr')
+    coalesce(p_lang, 'fr'),
+    case when p_receipt_data is not null and jsonb_typeof(p_receipt_data) = 'object'
+              and length(p_receipt_data::text) <= 2000 then p_receipt_data end
   )
   returning id into v_id;
   return v_id;
 end;
 $$;
 
-revoke all on function public.submit_depot_order(numeric, text, text, text, text, text) from public;
-grant execute on function public.submit_depot_order(numeric, text, text, text, text, text) to anon, authenticated;
+revoke all on function public.submit_depot_order(numeric, text, text, text, text, text, jsonb) from public;
+grant execute on function public.submit_depot_order(numeric, text, text, text, text, text, jsonb) to anon, authenticated;
 
 -- =====================================================================
 -- 7. REALTIME

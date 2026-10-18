@@ -4,7 +4,11 @@
 
 export function parseWaafiText(text) {
   if (!text) return { transferId: null, montant: null, devise: null, senderName: null, senderNumber: null, dateTime: null };
-  const idMatch = text.match(/(?:trx|transaction|ref(?:erence)?|id)[\s.:#]*([A-Za-z0-9]{6,})/i);
+  // Libellé "Transfer-Id" en priorité : le mot "id" seul peut se trouver
+  // dans un nom (ex: "Said") et donnerait un faux Transfer ID.
+  const idMatch = text.match(/transfer[\s\-_.]*id[\s.:#]*([A-Za-z0-9]{6,})/i)
+    || text.match(/(?:trx|transaction|ref(?:erence)?)[\s.:#]*([A-Za-z0-9]{6,})/i)
+    || text.match(/\bid[\s.:#]+([A-Za-z0-9]{6,})/i);
   // "Received DJF 50" / "Received USD 10" en priorité : sinon le premier
   // "DJF x" trouvé pourrait être le solde ("Your Balance is: DJF 6,444.7").
   const receivedMatch = text.match(/received\s+(djf|usd)\s*([\d,.]+)/i);
@@ -44,7 +48,7 @@ export function formatDjibouti(iso) {
   return `${p(w.getUTCDate())}/${p(w.getUTCMonth() + 1)}/${w.getUTCFullYear()} ${p(w.getUTCHours())}:${p(w.getUTCMinutes())}`;
 }
 
-function normalizePhone(num) {
+export function normalizePhone(num) {
   if (!num) return null;
   const digits = String(num).replace(/\D/g, '').replace(/^253/, ''); // retire l'indicatif +253 si présent
   return digits.slice(-8) || null; // numéros Djibouti : 8 chiffres

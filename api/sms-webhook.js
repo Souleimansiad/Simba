@@ -2,6 +2,7 @@ import { supabaseAdmin } from './_lib/supabase.js';
 import { sendTelegramAdmin } from './_lib/telegram.js';
 import { parseWaafiText, verifyDepotMatch, formatDjibouti } from './_lib/waafiMatch.js';
 import { creditDepot, flagMismatch } from './_lib/depotCredit.js';
+import { evaluateReceipt, failedReasons, findOrderForSms } from './_lib/receiptMatch.js';
 
 // Reçoit les SMS/notifications Waafi relayés par MacroDroid (sur le téléphone
 // recevant les paiements). Accepte plusieurs formats de body JSON :
@@ -102,12 +103,34 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, matched: false, reason: 'no_transfer_id', extracted });
     }
 
-    const { data: order } = await supabaseAdmin
+    // Données du SMS telles que comparées aux captures de paiement.
+    const smsLike = { transfer_id: transferId, montant, sender_number: senderNumber, sender_name: senderName, paid_at: paidAt };
+
+    let { data: order } = await supabaseAdmin
       .from('depot_orders')
       .select('*')
       .eq('transfer_id', transferId)
       .in('status', ['en_attente', 'paiement_recu'])
       .maybeSingle();
+
+    // Pas d'ordre portant ce Transfer ID : les reçus de l'app Waafi n'en ont
+    // pas, on cherche donc l'ordre en attente dont la capture concorde avec ce
+    // SMS (montant, expéditeur, destinataire, date).
+    if (!order) {
+      const found = await findOrderForSms(smsLike);
+      if (found.status === 'ambiguous') {
+        await sendTelegramAdmin(
+          `📩 SMS Waafi reçu — ${found.count} ordres correspondent\n\n${details}\n\n` +
+          `⚠️ Rapprochement automatique impossible : vérifier les captures et confirmer à la main.`
+        );
+        return res.status(200).json({ ok: true, matched: false, reason: 'ambiguous', count: found.count, extracted });
+      }
+      if (found.status === 'matched') {
+        order = found.order;
+        await supabaseAdmin.from('depot_orders').update({ transfer_id: transferId }).eq('id', order.id);
+        order.transfer_id = transferId;
+      }
+    }
 
     if (!order) {
       // Cas normal : le client paie avant de remplir le formulaire. Ce
@@ -123,13 +146,21 @@ export default async function handler(req, res) {
 
     await sendTelegramAdmin(`📩 SMS Waafi reçu — Ordre #${order.id} trouvé\n\n${details}\n\n⏳ Vérification en cours...`);
 
-    const verif = verifyDepotMatch(order, { montant, sender_number: senderNumber });
+    // Ordre avec capture : critères 6/6 (app) ou 5/5 (USSD). Sans capture
+    // (ancien formulaire) : Transfer ID + montant + expéditeur comme avant.
+    let verif;
+    if (order.receipt_data && order.receipt_data.kind) {
+      const ev = evaluateReceipt(order, smsLike);
+      verif = { ok: ev.ok, reasons: failedReasons(ev) };
+    } else {
+      verif = verifyDepotMatch(order, { montant, sender_number: senderNumber });
+    }
     if (!verif.ok) {
       await flagMismatch(order, verif.reasons);
       return res.status(200).json({ ok: true, matched: true, confirmed: false, reasons: verif.reasons, extracted });
     }
 
-    const result = await creditDepot(order, transferId, { sender_number: senderNumber });
+    const result = await creditDepot(order, transferId, smsLike);
     return res.status(200).json({ ok: true, matched: true, confirmed: true, ...result, extracted });
   } catch (err) {
     console.error('[sms-webhook]', err);

@@ -16,7 +16,15 @@ export function computeFraudScore(order, type) {
     reasons.push('Montant > 100000 DJF');
   }
 
-  if (type === 'depot') {
+  if (type === 'depot' && order.receipt_path) {
+    // Dépôt avec capture de paiement : le Transfer ID n'est pas saisi (les
+    // reçus de l'app Waafi n'en ont pas). On signale seulement une capture
+    // que le navigateur n'a pas su lire, qui part en vérification manuelle.
+    if (!order.receipt_data || !order.receipt_data.kind) {
+      score += 20;
+      reasons.push('Capture non reconnue (vérification manuelle)');
+    }
+  } else if (type === 'depot') {
     if (!order.transfer_id) {
       score += 40;
       reasons.push('Transfer ID manquant');

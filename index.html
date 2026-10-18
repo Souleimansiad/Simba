@@ -467,11 +467,12 @@ const KP_LANGS = {
     'depot.sender_number':'Votre numéro Waafi (expéditeur)', 'depot.sender_hint':'8 chiffres · commence par 77',
     'depot.transfer_id':'Transfer ID Waafi (preuve de paiement)',
     'depot.receipt':'Capture du paiement Waafi', 'depot.receipt_btn':'Ajouter la capture du paiement reçu',
-    'depot.receipt_change':'Changer la capture', 'depot.receipt_hint':"Capture d'écran de votre paiement dans l'app Waafi (le Transfer ID doit être visible)",
-    'depot.receipt_reading':'Lecture de la capture…', 'depot.receipt_found':'Transfer ID détecté',
-    'depot.receipt_manual':'Transfer ID non lu — un agent vérifiera votre capture',
+    'depot.receipt_change':'Changer la capture', 'depot.receipt_hint':"Reçu de l'app Waafi, ou SMS de l'opérateur si vous avez payé par code USSD — toutes les informations doivent être visibles",
+    'depot.receipt_reading':'Lecture de la capture…', 'depot.receipt_found':'Reçu détecté',
+    'depot.receipt_manual':'Capture non lue automatiquement — un agent la vérifiera',
     'depot.receipt_required':'Ajoutez la capture du paiement Waafi', 'depot.receipt_invalid':"Ce fichier n'est pas une image valide",
     'depot.receipt_upload_failed':"Envoi de la capture impossible, réessayez",
+    'depot.amount_mismatch':"Le montant saisi ne correspond pas à la capture ({x} DJF). Corrigez-le, ou appuyez de nouveau sur Soumettre pour envoyer tel quel.",
     'depot.whatsapp':'Numéro WhatsApp', 'depot.whatsapp_hint':'Pour vous contacter · obligatoire', 'depot.submit':'Soumettre le dépôt',
     'depot.copy_number':'Copier le numéro',
     'tabs.depot':'Dépôt 1xBet', 'tabs.retrait':'Retrait 1xBet',
@@ -526,11 +527,12 @@ const KP_LANGS = {
     'depot.sender_number':'Your Waafi number (sender)', 'depot.sender_hint':'8 digits · starts with 77',
     'depot.transfer_id':'Waafi Transfer ID (proof of payment)',
     'depot.receipt':'Waafi payment screenshot', 'depot.receipt_btn':'Add the payment receipt screenshot',
-    'depot.receipt_change':'Change screenshot', 'depot.receipt_hint':'Screenshot of your payment in the Waafi app (the Transfer ID must be visible)',
-    'depot.receipt_reading':'Reading the screenshot…', 'depot.receipt_found':'Transfer ID detected',
-    'depot.receipt_manual':'Transfer ID not read — an agent will check your screenshot',
+    'depot.receipt_change':'Change screenshot', 'depot.receipt_hint':'Waafi app receipt, or the operator SMS if you paid with a USSD code — all details must be visible',
+    'depot.receipt_reading':'Reading the screenshot…', 'depot.receipt_found':'Receipt detected',
+    'depot.receipt_manual':'Screenshot not read automatically — an agent will check it',
     'depot.receipt_required':'Add the Waafi payment screenshot', 'depot.receipt_invalid':'This file is not a valid image',
     'depot.receipt_upload_failed':'Could not upload the screenshot, try again',
+    'depot.amount_mismatch':'The amount entered does not match the screenshot ({x} DJF). Fix it, or press Submit again to send as is.',
     'depot.whatsapp':'WhatsApp number', 'depot.whatsapp_hint':'To contact you · required', 'depot.submit':'Submit deposit',
     'depot.copy_number':'Copy number',
     'tabs.depot':'Deposit 1xBet', 'tabs.retrait':'Withdraw 1xBet',
@@ -952,22 +954,61 @@ function depotContentHtml(){
 }
 /* --- Capture du paiement Waafi : compression + lecture du Transfer ID (OCR) --- */
 // <receipt-parse>
-// Cherche le Transfer ID dans le texte lu sur la capture. Renvoie null si
-// introuvable : l'ordre part alors en vérification manuelle (capture visible
-// par l'agent), jamais en crédit automatique sur une valeur douteuse.
-function extractTransferId(text){
-  const src = String(text || '');
-  // L'OCR confond souvent chiffres et lettres : on les remappe, mais seulement
-  // dans la valeur qui suit un libellé de type "Transfer ID", pas ailleurs.
-  const fix = { O:'0', o:'0', I:'1', l:'1', '|':'1', S:'5', s:'5', B:'8' };
-  // "Id" est souvent lu "1d" ou "ld" : le suffixe du libellé accepte ces variantes.
-  const re = /(?:transfer|transaction|trx|txn|ref(?:erence)?)[\s\-_.]*(?:[Ii1l|][dD]|no|number|#)?[\s:.\-#]*([\dOoIl|SsB]{6,12})(?![\dA-Za-z])/gi;
-  let m;
-  while ((m = re.exec(src))){
-    const id = m[1].replace(/[OoIl|SsB]/g, (c) => fix[c]);
-    if (/^\d{6,12}$/.test(id)) return id;
+// Lit le texte OCR d'une capture Waafi et renvoie les champs reconnus. Deux formats :
+//  - "app"  : reçu de l'app Waafi (« Transfer Successful ») : montant, expéditeur
+//             (n° + nom), destinataire (n° + nom), date. Pas de Transfer ID.
+//  - "ussd" : SMS de l'opérateur après un paiement par code USSD : Transfer ID,
+//             montant, destinataire (nom + n°), date.
+// Tout champ introuvable est simplement omis : le serveur exige tous les
+// critères du format pour créditer, sinon l'ordre passe en vérification manuelle.
+function parseReceiptText(text){
+  const raw = String(text || '');
+  const flat = raw.replace(/\s+/g, ' ');
+  const num = (v) => { const n = Number(String(v).replace(/,/g, '')); return Number.isFinite(n) ? n : null; };
+  const toIso = (d, mo, y, h, mi) => {
+    const year = Number(y) < 100 ? 2000 + Number(y) : Number(y);
+    const ms = Date.UTC(year, Number(mo) - 1, Number(d), Number(h) - 3, Number(mi)); // Djibouti = UTC+3
+    return Number.isNaN(ms) ? null : new Date(ms).toISOString();
+  };
+  const phone = (v) => { const d = String(v || '').replace(/\D/g, '').replace(/^253/, ''); return d.length === 8 ? d : null; };
+  const fixDigits = (v) => v.replace(/[OoIl|SsB]/g, (c) => ({ O:'0', o:'0', I:'1', l:'1', '|':'1', S:'5', s:'5', B:'8' }[c]));
+  const clean = (v) => String(v || '').replace(/[^A-Za-zÀ-ÿ' \-]/g, ' ').replace(/\s+/g, ' ').trim() || null;
+  const out = {};
+
+  // --- SMS opérateur (paiement par code USSD) ---
+  const u = flat.match(/transfer[\s\-_.]*(?:[Ii1l|][dD])?[\s:.\-#]*([\dOoIl|SsB]{6,12})(?![\dA-Za-z]).*?transferred\s+DJF\s*([\d.,]+)\s+to\s+(.+?)\s*\(\s*(\d{8,12})\s*\)\s*at\s+(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})\s+(\d{1,2}):(\d{2})/i);
+  if (u){
+    out.kind = 'ussd';
+    out.transfer_id = fixDigits(u[1]);
+    out.amount = num(u[2]);
+    out.dest_name = clean(u[3]);
+    out.dest_number = phone(u[4]);
+    out.date_iso = toIso(u[5], u[6], u[7], u[8], u[9]);
+    return out;
   }
-  return null;
+
+  // --- Reçu de l'app Waafi ---
+  if (/transaction\s*date/i.test(flat) || /transfer\s*successful/i.test(flat)){
+    out.kind = 'app';
+    const amt = flat.match(/amount\s+DJF\s*([\d.,]+)/i) || flat.match(/total\s+DJF\s*([\d.,]+)/i);
+    if (amt) out.amount = num(amt[1]);
+    const dt = flat.match(/transaction\s*date\s+(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})\s+(\d{1,2}):(\d{2})/i);
+    if (dt) out.date_iso = toIso(dt[1], dt[2], dt[3], dt[4], dt[5]);
+    const snd = flat.match(/sender\s+(\d{8,12})(?!\d)/i);
+    if (snd) out.sender_number = phone(snd[1]);
+    const lines = raw.split('\n').map((l) => l.trim()).filter(Boolean);
+    const sndNameLine = lines.find((l) => /^sender\s*name/i.test(l));
+    if (sndNameLine) out.sender_name = clean(sndNameLine.replace(/^sender\s*name/i, ''));
+    // Destinataire : une ligne de nom suivie d'une ligne qui n'est qu'un numéro.
+    const numIdx = lines.findIndex((l) => /^[^A-Za-z0-9]*(?:\+?253\s?)?\d{8}[^A-Za-z0-9]*$/.test(l));
+    if (numIdx > 0){
+      out.dest_number = phone(lines[numIdx]);
+      const name = clean(lines[numIdx - 1]);
+      if (name && !/transfer\s*successful/i.test(name)) out.dest_name = name;
+    }
+    return out;
+  }
+  return null; // format non reconnu
 }
 // </receipt-parse>
 
@@ -1001,14 +1042,14 @@ function loadTesseract(){
   return tesseractPromise;
 }
 // Lecture best-effort : toute erreur ou dépassement de 45 s => null (vérification manuelle).
-async function readTransferIdFromImage(blob){
+async function readReceiptFromImage(blob){
   const work = (async () => {
     const T = await loadTesseract();
     // Données de langue "best_int" (≈3 Mo, au lieu de 11 Mo par défaut) : lecture rapide sur mobile.
     const worker = await T.createWorker('eng', 1, { langPath: 'https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng/4.0.0_best_int' });
     try {
       const { data } = await worker.recognize(blob);
-      return extractTransferId(data.text);
+      return parseReceiptText(data.text);
     } finally {
       worker.terminate().catch(() => {});
     }
@@ -1025,7 +1066,7 @@ function bindDepotForm(app){
   });
 
   // --- capture du paiement ---
-  const receipt = { blob: null, transferId: null, ready: Promise.resolve() };
+  const receipt = { blob: null, data: null, ready: Promise.resolve(), amountWarned: false };
   const fileInput = document.getElementById('d-receipt');
   const receiptBtn = document.getElementById('d-receipt-btn');
   const receiptBox = document.getElementById('d-receipt-box');
@@ -1037,7 +1078,7 @@ function bindDepotForm(app){
   fileInput.addEventListener('change', () => {
     const file = fileInput.files && fileInput.files[0];
     if (!file) return;
-    receipt.blob = null; receipt.transferId = null;
+    receipt.blob = null; receipt.data = null; receipt.amountWarned = false;
     receiptBox.hidden = false;
     setStatus(t('depot.receipt_reading'));
     receipt.ready = (async () => {
@@ -1053,9 +1094,16 @@ function bindDepotForm(app){
       receiptImg.dataset.url = URL.createObjectURL(blob);
       receiptImg.src = receiptImg.dataset.url;
       receiptBtn.textContent = '📸 ' + t('depot.receipt_change');
-      receipt.transferId = await readTransferIdFromImage(blob);
-      if (receipt.transferId) setStatus(`✅ ${t('depot.receipt_found')} : ${receipt.transferId}`, 'ok');
-      else setStatus('⚠️ ' + t('depot.receipt_manual'), 'warn');
+      receipt.data = await readReceiptFromImage(blob);
+      const d = receipt.data;
+      if (d && d.kind){
+        const when = d.date_iso ? new Date(d.date_iso).toLocaleString('fr-FR', { timeZone:'Africa/Djibouti', dateStyle:'short', timeStyle:'short' }) : '';
+        const bits = [d.amount != null ? d.amount + ' DJF' : null, d.dest_number ? '→ ' + d.dest_number : null, when || null].filter(Boolean).join(' · ');
+        setStatus(`✅ ${t('depot.receipt_found')}${bits ? ' : ' + bits : ''}`, 'ok');
+      } else {
+        receipt.data = null;
+        setStatus('⚠️ ' + t('depot.receipt_manual'), 'warn');
+      }
     })();
   });
 
@@ -1074,6 +1122,13 @@ function bindDepotForm(app){
     btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
     try {
       await receipt.ready; // lecture de la capture terminée (ou échouée)
+      // Montant saisi différent du montant lu sur la capture : on prévient une
+      // fois (faute de frappe probable) avant d'envoyer quand même.
+      if (receipt.data && receipt.data.amount != null && receipt.data.amount !== amount && !receipt.amountWarned){
+        receipt.amountWarned = true;
+        btn.disabled = false; btn.textContent = t('depot.submit');
+        return toast(t('depot.amount_mismatch').replace('{x}', receipt.data.amount), 'error');
+      }
       if (!receipt.blob) throw new Error(t('depot.receipt_required'));
 
       // Nom imposé par la base : UUID + .jpg (voir policy du bucket "receipts").
@@ -1084,7 +1139,8 @@ function bindDepotForm(app){
 
       const { data, error } = await sb.rpc('submit_depot_order', {
         p_montant: amount, p_id_bet1x: betId, p_whatsapp: whatsapp,
-        p_receipt_path: path, p_transfer_id: receipt.transferId || null,
+        p_receipt_path: path, p_transfer_id: (receipt.data && receipt.data.transfer_id) || null,
+        p_receipt_data: receipt.data || null,
         p_lang: currentLang,
       });
       if (error) throw error;
@@ -1563,6 +1619,16 @@ function renderAdminOrders(main){
         </div>
       </div>
     ` : '';
+    const rd = o.receipt_data;
+    if (isDepot && o.receipt_path){
+      rows.splice(3, 0, ['Capture lue', rd && rd.kind
+        ? [rd.kind === 'ussd' ? 'SMS USSD' : 'Reçu app Waafi', rd.amount != null ? rd.amount + ' DJF' : null,
+           rd.sender_number ? 'exp. ' + rd.sender_number : null, rd.sender_name || null,
+           rd.dest_number ? '→ ' + rd.dest_number : null, rd.dest_name || null,
+           rd.transfer_id ? 'ID ' + rd.transfer_id : null,
+           rd.date_iso ? new Date(rd.date_iso).toLocaleString('fr-FR', { timeZone:'Africa/Djibouti', dateStyle:'short', timeStyle:'short' }) : null].filter(Boolean).join(' · ')
+        : 'non lue (vérifier la capture)']);
+    }
     const receiptPanel = (isDepot && o.receipt_path) ? `
       <div style="margin-top:10px;">
         <button class="btn btn-sm btn-outline" data-receipt="${escHtml(o.receipt_path)}">🧾 Voir la capture de paiement</button>
@@ -1573,7 +1639,7 @@ function renderAdminOrders(main){
           ${rows.map(([label, value]) => `
             <div class="suivi-detail-row">
               <span class="suivi-detail-label">${label}</span>
-              <span class="suivi-detail-value mono">${value} ${copyBtn(value)}</span>
+              <span class="suivi-detail-value mono">${escHtml(value)} ${copyBtn(value)}</span>
             </div>
           `).join('')}
         </div>
