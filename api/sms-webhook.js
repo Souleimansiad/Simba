@@ -53,6 +53,15 @@ export default async function handler(req, res) {
     devise: parsed.devise,
     date_heure: formatDjibouti(paidAt),
   };
+  // Bloc commun des alertes Telegram (parse_mode HTML : texte échappé).
+  const esc = (v) => String(v ?? '—').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  const details =
+    `Titre : ${esc(title)}\n` +
+    `Transfer-ID : ${esc(transferId)}\n` +
+    `Montant : ${esc(montant)} ${parsed.devise || 'DJF'}\n` +
+    `Nom expéditeur : ${esc(senderName)}\n` +
+    `N° expéditeur : ${esc(senderNumber)}\n` +
+    `Date : ${extracted.date_heure}`;
 
   try {
     // Les macros "Waafi sms" et "Waafi notif" relaient souvent le MÊME
@@ -83,7 +92,10 @@ export default async function handler(req, res) {
     }
 
     if (!transferId) {
-      await sendTelegramAdmin(`⚠️ SMS Waafi reçu sans Transfer ID détecté : "${(rawText || '').slice(0, 200)}"`);
+      await sendTelegramAdmin(
+        `📩 SMS Waafi reçu\n\n${details}\n\n` +
+        `⚠️ Transfer-ID non détecté — texte : "${esc((rawText || '').slice(0, 200))}"`
+      );
       return res.status(200).json({ ok: true, matched: false, reason: 'no_transfer_id', extracted });
     }
 
@@ -100,16 +112,13 @@ export default async function handler(req, res) {
       // enregistré et attend l'ordre (voir hooks/depot-created.js, qui
       // retrouvera ce SMS dès la création de l'ordre).
       await sendTelegramAdmin(
-        `📩 SMS Waafi reçu — Paiement enregistré\n\n` +
-        `Titre: ${title ?? '—'}\n` +
-        `Transfer-ID: ${transferId}\n` +
-        `Montant: ${montant ?? '?'} ${parsed.devise || 'DJF'}\n` +
-        `Expéditeur: ${senderName ?? '?'} (${senderNumber ?? '?'})\n` +
-        `Date: ${extracted.date_heure}\n\n` +
+        `📩 SMS Waafi reçu — Paiement enregistré\n\n${details}\n\n` +
         `✅ En attente de l'ordre client — confirmation automatique dès soumission.`
       );
       return res.status(200).json({ ok: true, matched: false, reason: 'order_not_found', extracted });
     }
+
+    await sendTelegramAdmin(`📩 SMS Waafi reçu — Ordre #${order.id} trouvé\n\n${details}\n\n⏳ Vérification en cours...`);
 
     const verif = verifyDepotMatch(order, { montant, sender_number: senderNumber });
     if (!verif.ok) {
