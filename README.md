@@ -24,8 +24,10 @@ Plateforme d'échange Waafi ⇄ 1xBet : dépôt et retrait en quelques minutes.
 | `WHATSAPP_AGENT_NUMBERS` | Numéros WhatsApp des agents à notifier (liste séparée par des virgules, optionnel) |
 | `MOBCASH_CASHBOX_CODE`, `MOBCASH_LOGIN`, `MOBCASH_PASSWORD` | Identifiants API MobCash APP2APP (crédit/retrait 1xBet) — cashboxCode, login et mot de passe du caissier fournis par MobCash |
 | `SUPABASE_WEBHOOK_SECRET`, `SMS_WEBHOOK_SECRET`, `TELEGRAM_WEBHOOK_SECRET`, `CRON_SECRET` | Secrets optionnels de vérification des webhooks |
-| `OPENROUTER_API_KEY` | Clé [OpenRouter](https://openrouter.ai) : lecture des captures de paiement par IA. Sans elle, les captures sont seulement vérifiées à la main par un agent |
-| `OPENROUTER_MODEL` | Modèle de **vision** OpenRouter (défaut `google/gemini-2.5-flash-lite`) |
+| `OPENROUTER_API_KEY`, `OPENROUTER_API_KEY_2` … `_9` | Clés [OpenRouter](https://openrouter.ai) (lecture des captures par IA, **uniquement via OpenRouter**). Plusieurs clés = rotation : une clé à sec ou invalide passe à la suivante. Sans clé, les captures sont vérifiées à la main |
+| `OPENROUTER_MODEL` | Modèle de vision principal (défaut `google/gemini-2.5-flash`) |
+| `OPENROUTER_FALLBACK_MODEL` | Modèle de secours si le principal échoue (défaut `openai/gpt-4o-mini`, `none` pour désactiver) |
+| `OPENROUTER_LOW_BALANCE_USD`, `OPENROUTER_DAILY_ALERT_USD` | Seuils d'alerte Telegram : solde d'une clé plafonnée sous ce montant (défaut 2 $), ou dépense du jour d'une clé sans plafond au-dessus (défaut 1 $) |
 | `WAAFI_NUMBER`, `WAAFI_DEST_NAMES` | Optionnels : compte Waafi qui reçoit les paiements (défaut `77626050`) et nom(s) du compte, séparés par des virgules (défaut `Souleiman Siad Soubaneh`) |
 
 3. Configurer les **Database Webhooks** Supabase vers `/api/hooks/depot-created`, `/api/hooks/depot-updated`, `/api/hooks/retrait-created`, `/api/hooks/retrait-updated`.
@@ -43,6 +45,12 @@ Le client ne saisit plus de Transfer ID : il joint la capture de son paiement Wa
    - reçu de l'app Waafi : montant, n° + nom expéditeur, n° + nom destinataire, date → **6/6** ;
    - SMS USSD : Transfer-ID, montant, n° + nom destinataire, date → **5/5**.
 4. Tous les critères concordent → crédit automatique ; sinon vérification manuelle (capture visible dans Telegram et le panneau admin).
+
+### Suivi du coût de l'IA
+
+- Chaque appel est journalisé dans `ai_usage` : modèle, clé utilisée (nom de la variable, jamais la clé), succès, tokens et **`cout_usd`** réel renvoyé par OpenRouter (`usage: {include: true}`).
+- Commande Telegram **`/ia`** : solde/consommation de chaque clé (`GET /api/v1/key`) et cumuls aujourd'hui / 7 jours / 30 jours.
+- Le cron quotidien (`/api/ordres-bloques`) contrôle les clés et alerte sur Telegram : clé invalide, solde bas, dépense anormale.
 
 ## Mode manuel (en attendant l'accès à l'API MobCash)
 

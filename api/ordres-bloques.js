@@ -1,6 +1,7 @@
 import { supabaseAdmin } from './_lib/supabase.js';
 import { sendTelegramAdmin } from './_lib/telegram.js';
 import { isMobcashConfigured } from './_lib/mobcash.js';
+import { checkOpenRouterBudgets } from './_lib/receiptAI.js';
 
 const STALE_MINUTES = 30;
 const RELAUNCH_HOURS = 24;
@@ -19,7 +20,8 @@ export default async function handler(req, res) {
   try {
     const staleAlert = await alertStaleOrders();
     const relaunched = await relaunchStaleDepots();
-    return res.status(200).json({ ok: true, ...staleAlert, relaunched });
+    const aiAlerts = await alertAiBudget();
+    return res.status(200).json({ ok: true, ...staleAlert, relaunched, ai_alerts: aiAlerts });
   } catch (err) {
     console.error('[ordres-bloques]', err);
     return res.status(500).json({ error: err.message });
@@ -100,4 +102,18 @@ async function relaunchStaleDepots() {
     `\n\n⚠️ Vérifier l'historique MobCash du caissier avant de relancer manuellement (le dépôt a pu être exécuté malgré l'erreur).`
   );
   return toRemind.length;
+}
+
+// Contrôle quotidien des clés OpenRouter (GET /api/v1/key) : alerte Telegram si
+// une clé est invalide, presque à sec, ou dépense anormalement. Ne bloque jamais
+// le reste du cron (le plan Hobby n'autorise que 2 crons : on réutilise celui-ci).
+async function alertAiBudget() {
+  try {
+    const { alerts } = await checkOpenRouterBudgets();
+    if (alerts.length) await sendTelegramAdmin(`🤖 <b>Budget IA (OpenRouter)</b>\n${alerts.join('\n')}`);
+    return alerts.length;
+  } catch (err) {
+    console.error('[ordres-bloques] budget IA', err.message);
+    return 0;
+  }
 }

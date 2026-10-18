@@ -1,6 +1,7 @@
 import { supabaseAdmin } from './_lib/supabase.js';
 import { sendTelegramMessage } from './_lib/telegram.js';
 import { resetCircuit, getCircuitState } from './_lib/mobcash.js';
+import { aiBudgetReport } from './_lib/receiptAI.js';
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID;
@@ -43,6 +44,11 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
+    if (/^\/ia$|^ia$/i.test(text)) {
+      await reply(chatId, await aiBudgetReport());
+      return res.status(200).json({ ok: true });
+    }
+
     if (/^\/ordres$|^ordres$/i.test(text)) {
       const [{ data: depots }, { data: retraits }] = await Promise.all([
         supabaseAdmin.from('depot_orders').select('id,montant,status').eq('status', 'en_attente').limit(10),
@@ -56,7 +62,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
-    await reply(chatId, 'Commandes disponibles:\n/ordres — ordres en attente\n/status — état circuit MobCash\nreset circuit — réinitialiser le circuit MobCash');
+    await reply(chatId, 'Commandes disponibles:\n/ordres — ordres en attente\n/status — état circuit MobCash\n/ia — coût et solde de l\'IA (OpenRouter)\nreset circuit — réinitialiser le circuit MobCash');
     return res.status(200).json({ ok: true });
   } catch (err) {
     console.error('[admin-bot]', err);

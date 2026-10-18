@@ -29,7 +29,7 @@ export default async function handler(req, res) {
     // le Transfer ID de l'ordre. Échec ou format inconnu : receipt_data reste
     // vide et l'ordre part en vérification manuelle.
     if (record.receipt_path && !record.receipt_data) {
-      const data = await extractReceiptForOrder(record.receipt_path);
+      const data = await extractReceiptForOrder(record.receipt_path, record.id);
       if (data) {
         const patch = { receipt_data: data };
         if (data.kind === 'ussd' && data.transfer_id) patch.transfer_id = data.transfer_id;
