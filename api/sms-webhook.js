@@ -23,6 +23,7 @@ export default async function handler(req, res) {
   const secret = process.env.SMS_WEBHOOK_SECRET;
   const providedSecret = req.headers['x-sms-secret'] || body.secret;
   if (secret && providedSecret !== secret) {
+    console.log('[sms-webhook] refusé : secret invalide');
     return res.status(401).json({ error: 'Secret invalide' });
   }
 
@@ -34,9 +35,11 @@ export default async function handler(req, res) {
   // sont traités : un SMS d'un numéro ou d'un contact ordinaire (même s'il
   // recopie un texte Waafi) est rejeté sans être stocké ni alerté.
   if (!title || title.toUpperCase() !== 'WAAFI SAS') {
+    console.log('[sms-webhook] ignoré (titre ≠ WAAFI SAS) :', JSON.stringify(title), '|', String(rawText || '').slice(0, 80));
     return res.status(200).json({ ok: true, ignored: true, reason: 'not_waafi', titre: title });
   }
 
+  console.log('[sms-webhook] accepté :', String(rawText || '').slice(0, 120));
   const parsed = parseWaafiText(rawText);
   const transferId = body.transfer_id || parsed.transferId;
   const montant = body.montant != null ? Number(body.montant) : parsed.montant;
