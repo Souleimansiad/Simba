@@ -11,7 +11,8 @@ import { normalizePhone } from './waafiMatch.js';
 //  - "ussd" (SMS de l'opérateur après un code USSD) : Transfer ID, montant,
 //           n° destinataire, nom destinataire, date                  (5/5)
 // Le SMS reçu ne contient ni destinataire ni date : le destinataire est
-// comparé au compte de la boutique, et la date à l'heure de réception du SMS.
+// comparé au compte de la boutique, et la date écrite sur le reçu à l'heure de
+// réception du SMS. L'heure à laquelle l'ordre a été soumis n'entre jamais en jeu.
 
 export const SHOP_NUMBER = (process.env.WAAFI_NUMBER || '77626050').trim();
 // Nom du compte Waafi qui reçoit les paiements (modifiable sans toucher au code
@@ -20,7 +21,6 @@ export const SHOP_NAMES = (process.env.WAAFI_DEST_NAMES || 'Souleiman Siad Souba
   .split(',').map((n) => n.trim()).filter(Boolean);
 const DATE_TOLERANCE_MS = 10 * 60 * 1000;
 const CANDIDATE_WINDOW_MS = 15 * 60 * 1000;
-const ORDER_MAX_AGE_MS = 48 * 60 * 60 * 1000;
 
 /* ------------------------------ noms ------------------------------ */
 function nameTokens(name) {
@@ -159,15 +159,17 @@ export async function findSmsForOrder(order) {
  * -> { status: 'matched', order } | { status: 'ambiguous', count } | { status: 'none' }
  */
 export async function findOrderForSms(sms) {
-  const since = new Date(Date.now() - ORDER_MAX_AGE_MS).toISOString();
+  // Aucun filtre sur l'heure de soumission de l'ordre : la date qui compte est
+  // celle écrite sur le reçu, comparée à l'arrivée du SMS (critère "date" de
+  // evaluateReceipt). Un client peut soumettre son ordre bien après avoir payé.
   const { data: orders } = await supabaseAdmin
     .from('depot_orders')
     .select('*')
     .eq('status', 'en_attente')
     .not('receipt_data', 'is', null)
     .eq('montant', sms.montant)
-    .gte('created_at', since)
-    .limit(50);
+    .order('created_at', { ascending: false })
+    .limit(200);
   const good = (orders || []).filter((o) => {
     // Un ordre "ussd" porte déjà son Transfer ID : il ne peut viser qu'un SMS identique.
     if (o.receipt_data && o.receipt_data.kind === 'ussd' && String(o.receipt_data.transfer_id) !== String(sms.transfer_id)) return false;
