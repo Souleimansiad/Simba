@@ -52,6 +52,10 @@ Le client ne saisit plus de Transfer ID : il joint la capture de son paiement Wa
 - Commande Telegram **`/ia`** : solde/consommation de chaque clé (`GET /api/v1/key`) et cumuls aujourd'hui / 7 jours / 30 jours.
 - Le cron quotidien (`/api/ordres-bloques`) contrôle les clés et alerte sur Telegram : clé invalide, solde bas, dépense anormale.
 
+## Diagnostic MobCash
+
+Commande Telegram **`/mobcash`** (chat admin) : une seule tentative de connexion, **aucun dépôt**. Affiche la réponse exacte de MobCash, l'état des 3 variables (longueur, espaces, guillemets collés — jamais leur valeur) et l'IP de sortie de Vercel (utile si MobCash filtre par IP). Évitez de la lancer en boucle : MobCash applique un rate limit.
+
 ## Mode manuel (en attendant l'accès à l'API MobCash)
 
 Tant que `MOBCASH_CASHBOX_CODE` / `MOBCASH_LOGIN` / `MOBCASH_PASSWORD` ne sont pas configurées sur Vercel, le crédit/paiement 1xBet se fait **manuellement** :

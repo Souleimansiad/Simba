@@ -198,3 +198,90 @@ export async function mobcashPayout(payerID, withdrawalCode, montant) {
     return { ...result, amount: validatedAmount };
   });
 }
+
+/**
+ * Diagnostic de connexion (commande Telegram /mobcash) : UNE tentative de login,
+ * aucune opération d'argent, circuit breaker non touché. Renvoie ce que MobCash
+ * répond réellement, l'état des variables d'environnement (jamais leur valeur)
+ * et l'adresse IP de sortie de Vercel, utile si MobCash filtre par IP.
+ */
+export async function mobcashDiagnostic() {
+  const rawEnv = {
+    cashbox: process.env.MOBCASH_CASHBOX_CODE || '',
+    login: process.env.MOBCASH_LOGIN || '',
+    password: process.env.MOBCASH_PASSWORD || '',
+  };
+  // Défauts classiques de saisie d'une variable : espaces/retours à la ligne,
+  // guillemets collés, caractères invisibles. Seules des propriétés sont renvoyées.
+  const inspect = (v) => ({
+    renseigne: v.trim().length > 0,
+    longueur: v.trim().length,
+    espaces_autour: v !== v.trim(),
+    entre_guillemets: /^["'].*["']$/.test(v.trim()),
+    caracteres_invisibles: /[\u0000-\u001f\u007f\u200b\ufeff]/.test(v.trim()),
+  });
+  const diag = {
+    configure: isMobcashConfigured(),
+    cashbox: { ...inspect(rawEnv.cashbox), numerique: /^\d+$/.test(rawEnv.cashbox.trim()) },
+    login: inspect(rawEnv.login),
+    password: inspect(rawEnv.password),
+    ip_sortie: null,
+    login_test: null,
+  };
+
+  try {
+    const r = await fetchWithTimeout('https://api.ipify.org?format=json', { method: 'GET' });
+    diag.ip_sortie = (await r.json()).ip || null;
+  } catch { /* information facultative */ }
+
+  const t0 = Date.now();
+  try {
+    const res = await fetchWithTimeout(LOGIN_URL, {
+      method: 'POST',
+      headers: { Accept: 'application/json, text/plain, */*', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cashboxCode: Number(MOBCASH_CASHBOX_CODE), login: MOBCASH_LOGIN, password: MOBCASH_PASSWORD }),
+    });
+    const rawText = await res.text();
+    let data = {};
+    try { data = JSON.parse(rawText); } catch { /* non JSON */ }
+    const ok = res.ok && !!data.accessToken;
+    diag.login_test = {
+      ok,
+      http: res.status,
+      duree_ms: Date.now() - t0,
+      serveur: res.headers && res.headers.get ? res.headers.get('server') : null,
+      cloudflare: !!(res.headers && res.headers.get && res.headers.get('cf-ray')),
+      // Réponse d'erreur affichée telle quelle ; en cas de succès jamais le jeton.
+      reponse: ok ? 'connexion réussie (jeton reçu, non affiché)' : (data.message || rawText.slice(0, 300) || '(vide)'),
+    };
+  } catch (err) {
+    diag.login_test = { ok: false, http: null, duree_ms: Date.now() - t0, reponse: err.message };
+  }
+  return diag;
+}
+
+/** Texte lisible (Telegram HTML) du diagnostic. */
+export function formatMobcashDiagnostic(d) {
+  const esc = (v) => String(v ?? '—').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  const flags = (x) => [
+    x.renseigne ? `${x.longueur} car.` : '❌ VIDE',
+    x.espaces_autour ? '⚠️ espaces/retour ligne autour' : null,
+    x.entre_guillemets ? '⚠️ guillemets collés' : null,
+    x.caracteres_invisibles ? '⚠️ caractères invisibles' : null,
+  ].filter(Boolean).join(' · ');
+  const t = d.login_test || {};
+  return [
+    '🔧 <b>Diagnostic MobCash</b> (1 connexion, aucun dépôt)',
+    '',
+    `Variables Vercel : ${d.configure ? '✅ les 3 sont renseignées' : '❌ incomplètes'}`,
+    `• Code caisse : ${flags(d.cashbox)}${d.cashbox.renseigne && !d.cashbox.numerique ? ' · ❌ NON numérique' : ''}`,
+    `• Login : ${flags(d.login)}`,
+    `• Mot de passe : ${flags(d.password)}`,
+    '',
+    `IP de sortie Vercel : ${esc(d.ip_sortie)}`,
+    '',
+    `Connexion : ${t.ok ? '✅ RÉUSSIE' : '❌ ÉCHEC'}`,
+    `• HTTP ${esc(t.http)} en ${esc(t.duree_ms)} ms${t.serveur ? ` · serveur ${esc(t.serveur)}` : ''}${t.cloudflare ? ' · derrière Cloudflare' : ''}`,
+    `• Réponse : ${esc(t.reponse)}`,
+  ].join('\n');
+}

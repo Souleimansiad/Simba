@@ -276,13 +276,13 @@ alter table public.support_sessions enable row level security;
 alter table public.alertes_etat     enable row level security;
 
 -- --- depot_orders ------------------------------------------------------
--- Le public peut créer un ordre (formulaire) mais jamais le lire en direct :
--- la lecture publique passe uniquement par get_order_status() ci-dessous.
+-- Le public ne lit jamais les ordres en direct : la lecture publique passe
+-- uniquement par get_order_status() ci-dessous.
+-- Aucune policy INSERT pour le public : un dépôt ne se crée que par
+-- submit_depot_order() (SECURITY DEFINER, voir 6ter), qui impose la capture de
+-- paiement ; un insert direct permettrait de fournir soi-même receipt_data.
+-- (Retire l'ancienne policy depot_orders_insert_public si elle existe encore.)
 drop policy if exists depot_orders_insert_public on public.depot_orders;
-create policy depot_orders_insert_public on public.depot_orders
-  for insert to anon, authenticated
-  with check (status = 'en_attente' and fraud_score = 0);
-
 drop policy if exists depot_orders_select_staff on public.depot_orders;
 create policy depot_orders_select_staff on public.depot_orders
   for select to authenticated
@@ -442,7 +442,7 @@ revoke all on function public.cancel_order(text, text) from public;
 grant execute on function public.cancel_order(text, text) to anon, authenticated;
 
 -- =====================================================================
--- 6bis. CRÉATION PUBLIQUE SÉCURISÉE — create_depot_order() / create_retrait_order()
+-- 6bis. CRÉATION PUBLIQUE SÉCURISÉE — create_retrait_order()  (dépôts : submit_depot_order(), voir 6ter)
 -- La policy RLS d'INSERT public autorise l'écriture, mais anon n'a aucune
 -- policy SELECT sur ces tables : un INSERT ... RETURNING (ce que fait
 -- .insert().select() côté client) échoue et annule toute la transaction,
@@ -450,30 +450,8 @@ grant execute on function public.cancel_order(text, text) to anon, authenticated
 -- DEFINER insèrent et renvoient uniquement l'id généré.
 -- =====================================================================
 
-create or replace function public.create_depot_order(
-  p_montant numeric,
-  p_id_bet1x text,
-  p_numero_waafi_expediteur text,
-  p_transfer_id text default null,
-  p_whatsapp text default null,
-  p_lang text default 'fr'
-) returns text
-language plpgsql
-security definer
-set search_path = public, extensions
-as $$
-declare
-  v_id text;
-begin
-  insert into public.depot_orders (montant, id_bet1x, numero_waafi_expediteur, transfer_id, whatsapp, lang)
-  values (p_montant, p_id_bet1x, p_numero_waafi_expediteur, p_transfer_id, p_whatsapp, coalesce(p_lang, 'fr'))
-  returning id into v_id;
-  return v_id;
-end;
-$$;
-
-revoke all on function public.create_depot_order(numeric, text, text, text, text, text) from public;
-grant execute on function public.create_depot_order(numeric, text, text, text, text, text) to anon, authenticated;
+-- Ancien chemin de dépôt (sans capture) : retiré.
+drop function if exists public.create_depot_order(numeric, text, text, text, text, text);
 
 create or replace function public.create_retrait_order(
   p_montant numeric,
