@@ -94,6 +94,14 @@ Intégration "APP2APP" (doc fournie par MobCash) :
 - Chaque opération refait un login (pas de cache de token entre invocations serverless) — volume faible, donc pas de complexité de rafraîchissement de token.
 - Voir `api/_lib/mobcash.js`.
 
+## Déployer en production
+
+Vercel déploie automatiquement la branche de production (`claude/new-session-mg7695`) à chaque push. Deux pièges rencontrés :
+
+- **Un commit déjà construit en aperçu n'est pas reconstruit.** Pousser le même commit sur la branche de développement puis sur la branche de production ne produit qu'un aperçu. Pousser d'abord sur la branche de production (ou y ajouter un nouveau commit).
+- **Quota de 100 déploiements par jour** (plan Hobby, pour toute l'équipe). Plusieurs projets Vercel reliés à ce même dépôt (`simba-waafi`, `simba-frf8`, `simba-f1mv`, `simba-wgjx`) reconstruisent chaque push et consomment le quota : déconnecter ceux qui ne servent pas (Vercel → projet → Settings → Git → Disconnect). Une fois le quota atteint, les déploiements par l'API sont refusés (HTTP 402) pendant 24 h.
+- Les migrations SQL (`supabase/migrations/`) sont appliquées par le workflow GitHub « Migrations Supabase » (secret `SUPABASE_DB_PASSWORD`) au push d'une migration ; les pousser **avant** le code qui en dépend.
+
 ## Limites du plan Vercel Hobby
 
 - **Fonctions serverless** : max 12 par déploiement. Les routes admin peu fréquentes (`stats`, `action-ordre`, `retry-deposit`, `test-payment`, `create-agent`) sont donc regroupées dans `api/admin.js`, dispatché via `?action=`.
