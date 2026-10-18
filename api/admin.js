@@ -143,7 +143,9 @@ async function handleActionOrdre(req, res) {
     // maintenant aussi les retraits (code_retrait_1x, tout aussi unique
     // par transaction côté 1xBet) — sans ça, un double-clic ou une requête
     // rejouée sur "confirmer" un retrait pouvait déclencher deux payouts.
-    const dedupeKey = type === 'depot' ? order.transfer_id : order.code_retrait_1x;
+    // Sans Transfer-ID (non lu sur la capture), l'ordre lui-même sert de clé
+    // pour qu'un double-clic ne déclenche pas deux crédits.
+    const dedupeKey = type === 'depot' ? (order.transfer_id || 'order:' + order.id) : order.code_retrait_1x;
     if (dedupeKey) {
       const { error: dedupeError } = await supabaseAdmin
         .from('ordre_traite')

@@ -73,7 +73,10 @@ async function finalizeCreditResult(order, result) {
 // panneau admin). Protégé par dédoublonnage atomique sur ordre_traite
 // (transfer_id = clé primaire) : appelée depuis sms-webhook.js et
 // hooks/depot-created.js, qui peuvent recevoir le même événement deux fois.
-export async function creditDepot(order, transferId) {
+export async function creditDepot(order, transferId, sms = null) {
+  // L'expéditeur n'est plus saisi par le client : on le renseigne depuis le
+  // SMS Waafi qui a confirmé le paiement.
+  const senderNumber = order.numero_waafi_expediteur || (sms && sms.sender_number) || null;
   const { error: dedupeError } = await supabaseAdmin
     .from('ordre_traite')
     .insert({ transfer_id: transferId, order_id: order.id });
@@ -97,13 +100,16 @@ export async function creditDepot(order, transferId) {
     throw dedupeError;
   }
 
-  await supabaseAdmin.from('depot_orders').update({ status: 'paiement_recu' }).eq('id', order.id);
+  await supabaseAdmin.from('depot_orders').update({
+    status: 'paiement_recu',
+    ...(senderNumber && !order.numero_waafi_expediteur ? { numero_waafi_expediteur: senderNumber } : {}),
+  }).eq('id', order.id);
 
   const mobcashOn = isMobcashConfigured();
   await sendTelegramAdmin(
     `💳 Ordre paiement confirmé — Paiement Waafi validé\n\n` +
     `Ordre: #${order.id} | ${order.montant} DJF\n` +
-    `Transfer-ID: ${transferId} | N°: ${order.numero_waafi_expediteur}\n` +
+    `Transfer-ID: ${transferId} | N°: ${senderNumber || '—'}\n` +
     `WhatsApp: ${order.whatsapp || '—'}\n\n` +
     (mobcashOn ? `⏳ MobCash va créditer le compte 1xBet...` : `⏳ Créditez manuellement puis confirmez sur le panneau admin...`)
   );

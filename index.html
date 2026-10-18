@@ -300,6 +300,12 @@ footer.site{border-top:1px solid var(--card-border); padding:18px 0; text-align:
 .phone-input .phone-prefix{display:flex; align-items:center; padding:0 12px; color:var(--accent); font-family:var(--font-mono); font-size:.9rem; font-weight:600; background:var(--bg-alt); border-right:1.5px solid var(--card-border); white-space:nowrap;}
 .phone-input input{border:none; background:transparent; flex:1; min-width:0; padding:12px 14px; color:var(--text); font-size:.92rem; font-family:var(--font-mono); box-shadow:none;}
 .phone-input input:focus{outline:none; box-shadow:none;}
+.receipt-box{display:flex; gap:12px; align-items:center; margin-top:10px; padding:10px; border:1.5px solid var(--card-border); background:var(--bg-alt); border-radius:var(--radius-m);}
+.receipt-box[hidden]{display:none;}
+.receipt-preview{width:64px; height:64px; object-fit:cover; border-radius:var(--radius-s); border:1px solid var(--card-border); flex-shrink:0;}
+.receipt-status{font-size:.82rem; color:var(--text-dim); line-height:1.4; word-break:break-word;}
+.receipt-status.ok{color:var(--success); font-weight:600;}
+.receipt-status.warn{color:var(--warning); font-weight:600;}
 .captcha-box{display:flex; align-items:center; justify-content:space-between; gap:10px; border:1.5px solid var(--card-border); background:var(--bg-alt); border-radius:var(--radius-m); padding:10px 12px; margin-bottom:12px;}
 .captcha-text{font-weight:700; font-size:.86rem; color:var(--accent);}
 .captcha-input{
@@ -460,6 +466,12 @@ const KP_LANGS = {
     'depot.amount':'Montant (DJF)', 'depot.bet_id':'ID 1xBet (compte à recharger)',
     'depot.sender_number':'Votre numéro Waafi (expéditeur)', 'depot.sender_hint':'8 chiffres · commence par 77',
     'depot.transfer_id':'Transfer ID Waafi (preuve de paiement)',
+    'depot.receipt':'Capture du paiement Waafi', 'depot.receipt_btn':'Ajouter la capture du paiement reçu',
+    'depot.receipt_change':'Changer la capture', 'depot.receipt_hint':"Capture d'écran de votre paiement dans l'app Waafi (le Transfer ID doit être visible)",
+    'depot.receipt_reading':'Lecture de la capture…', 'depot.receipt_found':'Transfer ID détecté',
+    'depot.receipt_manual':'Transfer ID non lu — un agent vérifiera votre capture',
+    'depot.receipt_required':'Ajoutez la capture du paiement Waafi', 'depot.receipt_invalid':"Ce fichier n'est pas une image valide",
+    'depot.receipt_upload_failed':"Envoi de la capture impossible, réessayez",
     'depot.whatsapp':'Numéro WhatsApp', 'depot.whatsapp_hint':'Pour vous contacter · obligatoire', 'depot.submit':'Soumettre le dépôt',
     'depot.copy_number':'Copier le numéro',
     'tabs.depot':'Dépôt 1xBet', 'tabs.retrait':'Retrait 1xBet',
@@ -513,6 +525,12 @@ const KP_LANGS = {
     'depot.amount':'Amount (DJF)', 'depot.bet_id':'1xBet ID (account to top up)',
     'depot.sender_number':'Your Waafi number (sender)', 'depot.sender_hint':'8 digits · starts with 77',
     'depot.transfer_id':'Waafi Transfer ID (proof of payment)',
+    'depot.receipt':'Waafi payment screenshot', 'depot.receipt_btn':'Add the payment receipt screenshot',
+    'depot.receipt_change':'Change screenshot', 'depot.receipt_hint':'Screenshot of your payment in the Waafi app (the Transfer ID must be visible)',
+    'depot.receipt_reading':'Reading the screenshot…', 'depot.receipt_found':'Transfer ID detected',
+    'depot.receipt_manual':'Transfer ID not read — an agent will check your screenshot',
+    'depot.receipt_required':'Add the Waafi payment screenshot', 'depot.receipt_invalid':'This file is not a valid image',
+    'depot.receipt_upload_failed':'Could not upload the screenshot, try again',
     'depot.whatsapp':'WhatsApp number', 'depot.whatsapp_hint':'To contact you · required', 'depot.submit':'Submit deposit',
     'depot.copy_number':'Copy number',
     'tabs.depot':'Deposit 1xBet', 'tabs.retrait':'Withdraw 1xBet',
@@ -895,6 +913,13 @@ function depotContentHtml(){
         </div>
 
         <div class="field">
+          <label for="d-betid">🎯 ${t('depot.bet_id')}</label>
+          <div class="field-with-action">
+            <input type="text" id="d-betid" required>
+            <button type="button" class="btn btn-outline btn-sm btn-paste" data-target="d-betid">📋 ${t('form.paste')}</button>
+          </div>
+        </div>
+        <div class="field">
           <label for="d-amount">💵 ${t('depot.amount')}</label>
           <div class="phone-input">
             <span class="phone-prefix">DJF</span>
@@ -903,24 +928,14 @@ function depotContentHtml(){
           <div class="hint">${t('form.min_amount_depot')}</div>
         </div>
         <div class="field">
-          <label for="d-betid">🎯 ${t('depot.bet_id')}</label>
-          <div class="field-with-action">
-            <input type="text" id="d-betid" required>
-            <button type="button" class="btn btn-outline btn-sm btn-paste" data-target="d-betid">📋 ${t('form.paste')}</button>
+          <label>🧾 ${t('depot.receipt')}</label>
+          <input type="file" id="d-receipt" accept="image/*" hidden>
+          <button type="button" class="btn btn-outline btn-block" id="d-receipt-btn">📸 ${t('depot.receipt_btn')}</button>
+          <div class="receipt-box" id="d-receipt-box" hidden>
+            <img id="d-receipt-img" class="receipt-preview" alt="">
+            <div class="receipt-status" id="d-receipt-status"></div>
           </div>
-        </div>
-        <div class="field">
-          <label for="d-transfer">🔑 ${t('depot.transfer_id')}</label>
-          <div class="field-with-action">
-            <input type="text" id="d-transfer" class="mono-input" required>
-            <button type="button" class="btn btn-outline btn-sm btn-paste" data-target="d-transfer">📋 ${t('form.paste')}</button>
-          </div>
-          <div class="hint">${t('form.transfer_min')}</div>
-        </div>
-        <div class="field">
-          <label for="d-sender">📞 ${t('depot.sender_number')}</label>
-          <input type="tel" id="d-sender" class="mono-input" required>
-          <div class="hint">${t('depot.sender_hint')}</div>
+          <div class="hint">${t('depot.receipt_hint')}</div>
         </div>
         <div class="field">
           <label for="d-whatsapp">💬 ${t('depot.whatsapp')}</label>
@@ -935,43 +950,141 @@ function depotContentHtml(){
       </form>
   `;
 }
+/* --- Capture du paiement Waafi : compression + lecture du Transfer ID (OCR) --- */
+// <receipt-parse>
+// Cherche le Transfer ID dans le texte lu sur la capture. Renvoie null si
+// introuvable : l'ordre part alors en vérification manuelle (capture visible
+// par l'agent), jamais en crédit automatique sur une valeur douteuse.
+function extractTransferId(text){
+  const src = String(text || '');
+  // L'OCR confond souvent chiffres et lettres : on les remappe, mais seulement
+  // dans la valeur qui suit un libellé de type "Transfer ID", pas ailleurs.
+  const fix = { O:'0', o:'0', I:'1', l:'1', '|':'1', S:'5', s:'5', B:'8' };
+  // "Id" est souvent lu "1d" ou "ld" : le suffixe du libellé accepte ces variantes.
+  const re = /(?:transfer|transaction|trx|txn|ref(?:erence)?)[\s\-_.]*(?:[Ii1l|][dD]|no|number|#)?[\s:.\-#]*([\dOoIl|SsB]{6,12})(?![\dA-Za-z])/gi;
+  let m;
+  while ((m = re.exec(src))){
+    const id = m[1].replace(/[OoIl|SsB]/g, (c) => fix[c]);
+    if (/^\d{6,12}$/.test(id)) return id;
+  }
+  return null;
+}
+// </receipt-parse>
+
+// Réduit la capture (1600px max, JPEG) : fichier léger à envoyer et image
+// raisonnable pour l'OCR sur mobile.
+async function shrinkImage(file, maxSide = 1600){
+  const bmp = await createImageBitmap(file);
+  const scale = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(bmp.width * scale);
+  canvas.height = Math.round(bmp.height * scale);
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+  if (bmp.close) bmp.close();
+  return new Promise((resolve, reject) => canvas.toBlob((b) => b ? resolve(b) : reject(new Error('image')), 'image/jpeg', 0.85));
+}
+
+let tesseractPromise = null;
+function loadTesseract(){
+  if (window.Tesseract) return Promise.resolve(window.Tesseract);
+  if (!tesseractPromise){
+    tesseractPromise = new Promise((resolve, reject) => {
+      const tag = document.createElement('script');
+      tag.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+      tag.onload = () => resolve(window.Tesseract);
+      tag.onerror = () => { tesseractPromise = null; reject(new Error('ocr-load')); };
+      document.head.appendChild(tag);
+    });
+  }
+  return tesseractPromise;
+}
+// Lecture best-effort : toute erreur ou dépassement de 45 s => null (vérification manuelle).
+async function readTransferIdFromImage(blob){
+  const work = (async () => {
+    const T = await loadTesseract();
+    // Données de langue "best_int" (≈3 Mo, au lieu de 11 Mo par défaut) : lecture rapide sur mobile.
+    const worker = await T.createWorker('eng', 1, { langPath: 'https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng/4.0.0_best_int' });
+    try {
+      const { data } = await worker.recognize(blob);
+      return extractTransferId(data.text);
+    } finally {
+      worker.terminate().catch(() => {});
+    }
+  })();
+  const timeout = new Promise((resolve) => setTimeout(() => resolve(null), 45000));
+  try { return await Promise.race([work, timeout]); } catch (err) { return null; }
+}
+
 function bindDepotForm(app){
   bindPasteButtons(app);
   const checkCaptcha = mountCaptcha('captcha-depot');
   document.getElementById('copy-waafi-number').addEventListener('click', () => {
     navigator.clipboard.writeText(CONFIG.WAAFI_NUMBER).then(() => toast(currentLang==='fr' ? 'Numéro copié' : 'Number copied', 'success'));
   });
-  // Nettoie en direct un copier-coller depuis l'app Waafi qui inclut plus
-  // que le Transfer-ID (ex: "91156840, Solde: 1 234.5 DJF") — l'utilisateur
-  // voit ainsi exactement ce qui sera soumis, pas une valeur nettoyée en
-  // silence seulement à l'envoi.
-  document.getElementById('d-transfer').addEventListener('input', (e) => {
-    const clean = e.target.value.replace(/[^A-Za-z0-9]/g, '');
-    if (clean !== e.target.value) e.target.value = clean;
+
+  // --- capture du paiement ---
+  const receipt = { blob: null, transferId: null, ready: Promise.resolve() };
+  const fileInput = document.getElementById('d-receipt');
+  const receiptBtn = document.getElementById('d-receipt-btn');
+  const receiptBox = document.getElementById('d-receipt-box');
+  const receiptImg = document.getElementById('d-receipt-img');
+  const receiptStatus = document.getElementById('d-receipt-status');
+  const setStatus = (text, cls) => { receiptStatus.textContent = text; receiptStatus.className = 'receipt-status' + (cls ? ' ' + cls : ''); };
+
+  receiptBtn.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files && fileInput.files[0];
+    if (!file) return;
+    receipt.blob = null; receipt.transferId = null;
+    receiptBox.hidden = false;
+    setStatus(t('depot.receipt_reading'));
+    receipt.ready = (async () => {
+      let blob;
+      try { blob = await shrinkImage(file); }
+      catch (err) {
+        receiptBox.hidden = true;
+        toast(t('depot.receipt_invalid'), 'error');
+        return;
+      }
+      receipt.blob = blob;
+      if (receiptImg.dataset.url) URL.revokeObjectURL(receiptImg.dataset.url);
+      receiptImg.dataset.url = URL.createObjectURL(blob);
+      receiptImg.src = receiptImg.dataset.url;
+      receiptBtn.textContent = '📸 ' + t('depot.receipt_change');
+      receipt.transferId = await readTransferIdFromImage(blob);
+      if (receipt.transferId) setStatus(`✅ ${t('depot.receipt_found')} : ${receipt.transferId}`, 'ok');
+      else setStatus('⚠️ ' + t('depot.receipt_manual'), 'warn');
+    })();
   });
 
   document.getElementById('form-depot').addEventListener('submit', async (e) => {
     e.preventDefault();
     const amount = Number(document.getElementById('d-amount').value);
     const betId = document.getElementById('d-betid').value.trim();
-    const sender = document.getElementById('d-sender').value.trim();
-    // Les clients copient parfois plus que l'ID depuis l'app Waafi (ex:
-    // "91156840,solde") — ça empêche toute correspondance avec le SMS reçu
-    // puisque la comparaison est exacte. On ne garde que les caractères
-    // alphanumériques (format réel des Transfer-ID Waafi).
-    const transferId = document.getElementById('d-transfer').value.trim().replace(/[^A-Za-z0-9]/g, '');
     const whatsapp = document.getElementById('d-whatsapp').value.trim();
 
+    if (!betId || !whatsapp) return toast(t('form.required'), 'error');
     if (!amount || amount < CONFIG.MIN_DEPOT_AMOUNT) return toast(t('form.min_amount_depot'), 'error');
-    if (!betId || !sender || !whatsapp) return toast(t('form.required'), 'error');
+    if (!fileInput.files || !fileInput.files[0]) return toast(t('depot.receipt_required'), 'error');
     if (!checkCaptcha()) return toast(t('form.captcha_wrong'), 'error');
 
     const btn = document.getElementById('d-submit');
     btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
     try {
-      const { data, error } = await sb.rpc('create_depot_order', {
-        p_montant: amount, p_id_bet1x: betId, p_numero_waafi_expediteur: sender,
-        p_transfer_id: transferId || null, p_whatsapp: whatsapp || null,
+      await receipt.ready; // lecture de la capture terminée (ou échouée)
+      if (!receipt.blob) throw new Error(t('depot.receipt_required'));
+
+      // Nom imposé par la base : UUID + .jpg (voir policy du bucket "receipts").
+      const uid = (crypto.randomUUID ? crypto.randomUUID() : (Date.now().toString(16) + Math.random().toString(16).slice(2)));
+      const path = uid.replace(/[^A-Za-z0-9-]/g, '') + '.jpg';
+      const up = await sb.storage.from('receipts').upload(path, receipt.blob, { contentType: 'image/jpeg', upsert: false });
+      if (up.error) throw new Error(t('depot.receipt_upload_failed'));
+
+      const { data, error } = await sb.rpc('submit_depot_order', {
+        p_montant: amount, p_id_bet1x: betId, p_whatsapp: whatsapp,
+        p_receipt_path: path, p_transfer_id: receipt.transferId || null,
         p_lang: currentLang,
       });
       if (error) throw error;
@@ -1164,7 +1277,7 @@ function renderSuivi(app, orderId){
     const isDepot = order.type === 'depot';
     const rows = [
       [t('suivi.detail.bet_id'), order.id_bet1x],
-      [isDepot ? t('suivi.detail.waafi_depot') : t('suivi.detail.waafi_retrait'), order.waafi_number],
+      [isDepot ? t('suivi.detail.waafi_depot') : t('suivi.detail.waafi_retrait'), order.waafi_number || '—'],
       [isDepot ? t('suivi.detail.ref_depot') : t('suivi.detail.ref_retrait'), order.reference],
       order.whatsapp ? [t('suivi.detail.whatsapp'), order.whatsapp] : null,
       [t('suivi.detail.created'), new Date(order.created_at).toLocaleString()],
@@ -1431,7 +1544,7 @@ function renderAdminOrders(main){
     const rows = [
       ['ID', o.id],
       ['ID 1xBet', o.id_bet1x],
-      [isDepot ? 'N° Waafi expéditeur' : 'N° Waafi réception', isDepot ? o.numero_waafi_expediteur : o.numero_waafi_reception],
+      [isDepot ? 'N° Waafi expéditeur' : 'N° Waafi réception', isDepot ? (o.numero_waafi_expediteur || '—') : o.numero_waafi_reception],
       [isDepot ? 'Transfer ID' : 'Code retrait 1xBet', isDepot ? (o.transfer_id || '—') : o.code_retrait_1x],
       ['WhatsApp', o.whatsapp || '—'],
       ['Score fraude', o.fraud_score],
@@ -1450,6 +1563,10 @@ function renderAdminOrders(main){
         </div>
       </div>
     ` : '';
+    const receiptPanel = (isDepot && o.receipt_path) ? `
+      <div style="margin-top:10px;">
+        <button class="btn btn-sm btn-outline" data-receipt="${escHtml(o.receipt_path)}">🧾 Voir la capture de paiement</button>
+      </div>` : '';
     return `
       <tr class="detail-row"><td colspan="8">
         <div class="suivi-details" style="margin-top:0;border-top:none;">
@@ -1460,6 +1577,7 @@ function renderAdminOrders(main){
             </div>
           `).join('')}
         </div>
+        ${receiptPanel}
         ${retryPanel}
       </td></tr>
     `;
@@ -1516,6 +1634,17 @@ function renderAdminOrders(main){
     tbody.querySelectorAll('button[data-copy]').forEach(btn => {
       btn.addEventListener('click', () => {
         navigator.clipboard.writeText(btn.dataset.copy).then(() => toast('Copié', 'success'));
+      });
+    });
+    tbody.querySelectorAll('button[data-receipt]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        try {
+          const { data, error } = await sb.storage.from('receipts').createSignedUrl(btn.dataset.receipt, 300);
+          if (error || !data) throw error || new Error('Capture introuvable');
+          window.open(data.signedUrl, '_blank', 'noopener');
+        } catch (err) { toast(err.message || 'Capture introuvable', 'error'); }
+        btn.disabled = false;
       });
     });
     tbody.querySelectorAll('button[data-retry-id]').forEach(btn => {

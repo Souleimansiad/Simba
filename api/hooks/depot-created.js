@@ -4,6 +4,7 @@ import { sendTelegramAdmin } from '../_lib/telegram.js';
 import { notifyAgentsWhatsApp, sendWhatsApp } from '../_lib/whatsapp.js';
 import { verifyDepotMatch } from '../_lib/waafiMatch.js';
 import { creditDepot, flagMismatch } from '../_lib/depotCredit.js';
+import { receiptSignedUrl } from '../_lib/receipts.js';
 
 // Configurer ce endpoint comme Database Webhook Supabase :
 // INSERT on public.depot_orders -> POST https://<domain>/api/hooks/depot-created
@@ -44,9 +45,12 @@ export default async function handler(req, res) {
     }
 
     if (score > 0) {
+      // Ne touche au statut que pour un ordre frauduleux : réécrire le statut
+      // du payload (lu à la création) pourrait annuler un crédit survenu
+      // entre-temps via le webhook SMS.
       await supabaseAdmin
         .from('depot_orders')
-        .update({ fraud_score: score, status: isFraud ? 'fraude' : record.status })
+        .update(isFraud ? { fraud_score: score, status: 'fraude' } : { fraud_score: score })
         .eq('id', record.id);
     }
 
@@ -65,13 +69,16 @@ export default async function handler(req, res) {
         `Score fraude ${score}: ${reasons.join(', ')}`
       );
     } else {
+      const capture = await receiptSignedUrl(record.receipt_path);
       await sendTelegramAdmin(
         `📥 Nouvel ordre Dépôt — #${record.id}\n\n` +
         `Montant : ${record.montant} DJF\n` +
         `ID 1xBet : ${record.id_bet1x}\n` +
-        `Transfer-ID : ${record.transfer_id || '—'}\n` +
-        `N° Waafi : ${record.numero_waafi_expediteur}\n\n` +
-        `⏳ Vérification en cours...`
+        (record.transfer_id
+          ? `Transfer-ID (lu sur la capture) : ${record.transfer_id}\n`
+          : `⚠️ Transfer-ID non lu sur la capture — vérifier la capture avant de confirmer\n`) +
+        (capture ? `🧾 <a href="${capture.replace(/&/g, '&amp;')}">Voir la capture de paiement</a>\n` : '') +
+        `\n⏳ Vérification en cours...`
       );
     }
     await notifyAgentsWhatsApp(`Nouveau dépôt #${record.id} — ${record.montant} DJF${isFraud ? ' (FRAUDE SUSPECTÉE)' : ''}`);
@@ -102,7 +109,7 @@ export default async function handler(req, res) {
       if (sms) {
         const verif = verifyDepotMatch(record, sms);
         if (verif.ok) {
-          confirmation = await creditDepot(record, record.transfer_id);
+          confirmation = await creditDepot(record, record.transfer_id, sms);
         } else {
           await flagMismatch(record, verif.reasons);
           confirmation = { confirmed: false, reasons: verif.reasons };

@@ -59,7 +59,10 @@ export function verifyDepotMatch(order, sms) {
   if (!sms) return { ok: false, reasons: ['Aucun SMS Waafi reçu avec ce Transfer ID'] };
 
   const reasons = [];
-  const senderOk = normalizePhone(order.numero_waafi_expediteur) === normalizePhone(sms.sender_number);
+  // Le client ne saisit plus son numéro Waafi (il joint une capture) : le
+  // contrôle de l'expéditeur ne s'applique que si l'ordre en porte un.
+  const orderSender = normalizePhone(order.numero_waafi_expediteur);
+  const senderOk = !orderSender || orderSender === normalizePhone(sms.sender_number);
   if (!senderOk) {
     reasons.push(`numéro expéditeur différent (ordre: ${order.numero_waafi_expediteur}, SMS: ${sms.sender_number || '?'})`);
   }

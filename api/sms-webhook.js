@@ -129,7 +129,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, matched: true, confirmed: false, reasons: verif.reasons, extracted });
     }
 
-    const result = await creditDepot(order, transferId);
+    const result = await creditDepot(order, transferId, { sender_number: senderNumber });
     return res.status(200).json({ ok: true, matched: true, confirmed: true, ...result, extracted });
   } catch (err) {
     console.error('[sms-webhook]', err);
