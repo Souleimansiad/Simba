@@ -3,14 +3,18 @@
 // DJF 50 from Souleiman Siad Soubaneh(77626050), Your Balance is: DJF 6,444.7."
 
 export function parseWaafiText(text) {
-  if (!text) return { transferId: null, montant: null, senderName: null, senderNumber: null, dateTime: null };
+  if (!text) return { transferId: null, montant: null, devise: null, senderName: null, senderNumber: null, dateTime: null };
   const idMatch = text.match(/(?:trx|transaction|ref(?:erence)?|id)[\s.:#]*([A-Za-z0-9]{6,})/i);
-  const amountMatch = text.match(/(?:djf|amount|montant)[^\d]{0,6}([\d,.]+)/i) || text.match(/([\d,.]{3,})\s*(?:djf)/i);
+  // "Received DJF 50" / "Received USD 10" en priorité : sinon le premier
+  // "DJF x" trouvé pourrait être le solde ("Your Balance is: DJF 6,444.7").
+  const receivedMatch = text.match(/received\s+(djf|usd)\s*([\d,.]+)/i);
+  const amountMatch = receivedMatch ? [null, receivedMatch[2]] : text.match(/(?:djf|amount|montant)[^\d]{0,6}([\d,.]+)/i) || text.match(/([\d,.]{3,})\s*(?:djf)/i);
   const senderMatch = text.match(/from\s+(.*?)\s*\((\d{6,10})\)/i);
   const senderNumberFallback = senderMatch ? null : text.match(/exp[ée]diteur\D{0,10}(\d{6,10})/i);
   return {
     transferId: idMatch ? idMatch[1] : null,
-    montant: amountMatch ? Number(amountMatch[1].replace(/[,.](?=\d{3}\b)/g, '').replace(',', '.')) : null,
+    montant: amountMatch ? Number(amountMatch[1].replace(/[.,]$/, '').replace(/[,.](?=\d{3}\b)/g, '').replace(',', '.')) : null,
+    devise: receivedMatch ? receivedMatch[1].toUpperCase() : null,
     senderName: senderMatch && senderMatch[1] ? senderMatch[1].trim() : null,
     senderNumber: senderMatch ? senderMatch[2] : senderNumberFallback ? senderNumberFallback[1] : null,
     dateTime: parseWaafiDate(text),

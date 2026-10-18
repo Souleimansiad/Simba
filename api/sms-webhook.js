@@ -26,13 +26,14 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Secret invalide' });
   }
 
-  const title = body.not_title || body.title || null;
+  // "titre" = {sms_name} (macro SMS) ou {not_title} (macro notification).
+  const title = String(body.titre || body.not_title || body.title || '').trim() || null;
   const rawText = body.text || body.message || body.notification;
 
-  // MacroDroid relaie aussi les SMS/notifications ordinaires (titre = un
-  // numéro ou un contact) : seuls ceux de Waafi sont traités, le reste est
-  // ignoré sans être stocké ni alerté. Sans titre, on se rabat sur le texte.
-  if (!/waafi/i.test(title || rawText || '')) {
+  // Seuls les SMS/notifications dont le titre est exactement "WAAFI SAS"
+  // sont traités : un SMS d'un numéro ou d'un contact ordinaire (même s'il
+  // recopie un texte Waafi) est rejeté sans être stocké ni alerté.
+  if (!title || title.toUpperCase() !== 'WAAFI SAS') {
     return res.status(200).json({ ok: true, ignored: true, reason: 'not_waafi', titre: title });
   }
 
@@ -49,10 +50,26 @@ export default async function handler(req, res) {
     nom_expediteur: senderName,
     numero_expediteur: senderNumber,
     montant,
+    devise: parsed.devise,
     date_heure: formatDjibouti(paidAt),
   };
 
   try {
+    // Les macros "Waafi sms" et "Waafi notif" relaient souvent le MÊME
+    // paiement deux fois : le second envoi est ignoré (pas de doublon
+    // stocké ni d'alerte Telegram répétée).
+    if (transferId) {
+      const { data: already } = await supabaseAdmin
+        .from('waafi_notifications')
+        .select('id')
+        .eq('type', 'sms_received')
+        .eq('transfer_id', transferId)
+        .limit(1);
+      if (already && already.length > 0) {
+        return res.status(200).json({ ok: true, duplicate: true, extracted });
+      }
+    }
+
     const baseRow = { type: 'sms_received', message: rawText || null, transfer_id: transferId, montant, sender_number: senderNumber };
     const { error: insertErr } = await supabaseAdmin.from('waafi_notifications').insert({
       ...baseRow, title, sender_name: senderName, paid_at: paidAt,
@@ -86,7 +103,7 @@ export default async function handler(req, res) {
         `📩 SMS Waafi reçu — Paiement enregistré\n\n` +
         `Titre: ${title ?? '—'}\n` +
         `Transfer-ID: ${transferId}\n` +
-        `Montant: ${montant ?? '?'} DJF\n` +
+        `Montant: ${montant ?? '?'} ${parsed.devise || 'DJF'}\n` +
         `Expéditeur: ${senderName ?? '?'} (${senderNumber ?? '?'})\n` +
         `Date: ${extracted.date_heure}\n\n` +
         `✅ En attente de l'ordre client — confirmation automatique dès soumission.`
