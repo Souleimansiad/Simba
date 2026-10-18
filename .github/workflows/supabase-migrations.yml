@@ -10,11 +10,11 @@ name: Migrations Supabase
 # branche de production).
 #
 # Secret requis (Settings > Secrets and variables > Actions) :
-#   SUPABASE_DB_URL  URI Postgres du projet, en mode "Session pooler" :
-#   Supabase > Connect > Session pooler, ex.
-#   postgresql://postgres.<ref>:<mot-de-passe>@aws-0-<region>.pooler.supabase.com:5432/postgres
-#   (la connexion directe db.<ref>.supabase.co est en IPv6 seulement :
-#   elle ne fonctionne pas depuis GitHub Actions)
+#   SUPABASE_DB_PASSWORD  le mot de passe de la base Supabase, tel quel (aucun
+#                         encodage nécessaire, même avec des caractères spéciaux).
+#   Le serveur (Session pooler) et l'utilisateur sont fixés plus bas : ils ne
+#   sont pas secrets. (Alternative : SUPABASE_DB_URL, une URI Postgres complète
+#   du Session pooler — le mot de passe doit alors être encodé dans l'URI.)
 
 on:
   push:
@@ -38,14 +38,27 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
+      PGHOST: aws-1-eu-west-1.pooler.supabase.com   # Session pooler du projet (non secret)
+      PGPORT: '5432'
+      PGUSER: postgres.ylbhmtujnhhrdywnztxo         # postgres.<référence du projet>
+      PGDATABASE: postgres
+      PGSSLMODE: require
+      PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Vérifier le secret SUPABASE_DB_URL
+      - name: Préparer la connexion
         run: |
-          if [ -z "$SUPABASE_DB_URL" ]; then
-            echo "::error::Secret SUPABASE_DB_URL manquant : Settings > Secrets and variables > Actions > New repository secret (URI du Session pooler Supabase)."
+          if [ -n "$PGPASSWORD" ]; then
+            echo "Connexion par SUPABASE_DB_PASSWORD (utilisateur $PGUSER)"
+            echo 'CONN=' >> "$GITHUB_ENV"
+          elif [ -n "$SUPABASE_DB_URL" ]; then
+            echo "Connexion par SUPABASE_DB_URL"
+            echo "CONN=$SUPABASE_DB_URL" >> "$GITHUB_ENV"
+            echo "::add-mask::$SUPABASE_DB_URL"
+          else
+            echo "::error::Secret SUPABASE_DB_PASSWORD manquant : Settings > Secrets and variables > Actions > New repository secret (mot de passe de la base Supabase)."
             exit 1
           fi
 
@@ -54,12 +67,12 @@ jobs:
           set -e
           for f in $(ls supabase/migrations/*.sql | sort); do
             echo "→ $f"
-            psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 --single-transaction -f "$f"
+            psql "$CONN" -v ON_ERROR_STOP=1 --single-transaction -f "$f"
           done
 
       - name: Vérifier le résultat
         run: |
-          psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -tA <<'SQL'
+          psql "$CONN" -v ON_ERROR_STOP=1 -tA <<'SQL'
           do $$
           begin
             if not exists (select 1 from pg_proc where proname = 'submit_depot_order') then
