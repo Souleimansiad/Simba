@@ -285,3 +285,23 @@ export function formatMobcashDiagnostic(d) {
     `• Réponse : ${esc(t.reponse)}`,
   ].join('\n');
 }
+
+/**
+ * Explique une erreur MobCash à l'agent. safeToRetry = false quand MobCash a pu
+ * exécuter le dépôt malgré l'erreur (constaté en test : timeouts, 5xx sur
+ * /deposit) : relancer à l'aveugle risquerait de créditer deux fois.
+ * Une erreur de connexion, de vérification du compte (/payerNickname) ou un
+ * refus explicite (solde, devise, limite) survient AVANT toute exécution.
+ */
+export function describeMobcashError(message) {
+  const m = String(message || '');
+  const out = (kind, label, safeToRetry, hint) => ({ kind, label, safeToRetry, hint });
+  if (/Circuit MobCash ouvert/i.test(m)) return out('circuit', 'Circuit MobCash ouvert (pannes répétées)', true, 'Attendre quelques minutes ou envoyer « reset circuit »');
+  if (/payerNickname/i.test(m) && !/429|rate/i.test(m)) return out('invalid_id', 'ID 1xBet introuvable ou invalide', true, 'Demander le bon ID au client puis : relance #ORDRE [bon ID 1xBet]');
+  if (/login/i.test(m) || /unauthorized/i.test(m)) return out('login', 'Connexion MobCash refusée (identifiants ou accès)', true, 'Vérifier les variables MOBCASH_* ou lancer /mobcash');
+  if (/insuffisan|insufficient|not enough|solde|balance|funds/i.test(m)) return out('balance', 'Solde de la caisse MobCash insuffisant', true, 'Recharger la caisse MobCash puis : relance #ORDRE');
+  if (/currency|devise/i.test(m)) return out('currency', 'Devise du compte 1xBet incompatible', true, 'Vérifier la devise du compte 1xBet du client');
+  if (/429|rate ?limit/i.test(m)) return out('rate_limit', 'Limite de requêtes MobCash atteinte', true, 'Réessayer dans quelques minutes : relance #ORDRE');
+  if (/n'a pas répondu|timeout|ECONN|fetch failed|injoignable|ENOTFOUND/i.test(m)) return out('timeout', 'MobCash n\'a pas répondu', false, 'Vérifier l\'historique MobCash du caissier : le dépôt a peut-être déjà été exécuté');
+  return out('other', 'Autre échec MobCash', false, 'Vérifier l\'historique MobCash du caissier avant de relancer');
+}

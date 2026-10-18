@@ -2,6 +2,8 @@ import { supabaseAdmin } from './supabase.js';
 import { mobcashDeposit, isMobcashConfigured } from './mobcash.js';
 import { sendTelegramAdmin } from './telegram.js';
 import { sendWhatsApp } from './whatsapp.js';
+import { describeMobcashError } from './mobcash.js';
+import { notifyCreditFailure } from './depotActions.js';
 
 // Un échec de payerNickname (vérification de compte) signifie que l'ID
 // 1xBet lui-même est invalide.
@@ -35,11 +37,7 @@ async function finalizeCreditResult(order, result) {
   if (result.success) {
     await supabaseAdmin.from('depot_orders').update({ status: 'credite', mobcash_status: null }).eq('id', order.id);
     await sendTelegramAdmin(`✅ Dépôt — Crédité avec succès\n#${order.id} — ${order.montant} DJF`);
-    await sendWhatsApp(
-      order.whatsapp,
-      `✅ Simba — Dépôt #${order.id} crédité avec succès !\n` +
-      `${order.montant} DJF envoyés sur votre compte 1xBet ${order.id_bet1x}. Merci d'utiliser Simba 🦁`
-    );
+    // Le client est prévenu par le webhook depot-updated (changement de statut vers "credite").
     return { credited: true };
   }
 
@@ -51,20 +49,17 @@ async function finalizeCreditResult(order, result) {
   // relancer, l'admin doit vérifier l'historique MobCash du caissier pour
   // confirmer qu'aucun dépôt n'a déjà été effectué.
   await supabaseAdmin.from('alertes_etat').insert({ type: 'mobcash_credit_failed', order_id: order.id, collection: 'depot_orders' });
-  const reasonLabel = result.permanent ? 'ID 1xBet incorrect' : result.ambiguous ? 'réponse ambiguë' : 'échec MobCash';
+  const info = describeMobcashError(result.error.message);
   await sendTelegramAdmin(
-    (result.ambiguous ? `❓ Résultat incertain — Dépôt #${order.id}\n` : `❌ Échec — Dépôt #${order.id}\n`) +
-    `Paiement Waafi confirmé, crédit MobCash ${result.ambiguous ? 'non confirmé' : 'échoué'} (${reasonLabel}) : ${result.error.message}\n` +
-    (result.ambiguous
-      ? `⚠️ MobCash n'a confirmé NI le succès NI l'échec — vérifier l'historique MobCash du caissier pour savoir si le dépôt a déjà été exécuté avant de relancer.`
-      : `⚠️ Vérifier l'historique MobCash du caissier AVANT de relancer (le dépôt a pu être exécuté malgré cette erreur).`)
+    `❌ Dépôt #${order.id} — paiement Waafi confirmé, crédit MobCash en échec\n` +
+    `Cause : ${info.label}\n` +
+    `Détail : ${result.error.message.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))}\n\n` +
+    `👉 ${info.hint.replace('#ORDRE', '#' + order.id)}\n` +
+    (info.safeToRetry
+      ? `Commande : relance #${order.id}  (ou relance #${order.id} [bon ID 1xBet])`
+      : `⚠️ MobCash a peut-être déjà exécuté le dépôt : vérifier son historique, puis relance #${order.id} oui`)
   );
-  await sendWhatsApp(
-    order.whatsapp,
-    result.permanent
-      ? `❌ Simba — L'ID 1xBet indiqué pour votre dépôt #${order.id} (${order.id_bet1x}) est incorrect ou introuvable. Vérifiez votre ID 1xBet et contactez le support pour corriger votre dépôt.`
-      : `❌ Simba — Le crédit de votre dépôt #${order.id} n'a pas pu être confirmé automatiquement. Notre équipe va vérifier et intervenir manuellement.`
-  );
+  await notifyCreditFailure(order, info, order.id_bet1x);
   return { credited: false, error: result.error.message, permanent: result.permanent };
 }
 
@@ -113,11 +108,7 @@ export async function creditDepot(order, transferId, sms = null) {
     `WhatsApp: ${order.whatsapp || '—'}\n\n` +
     (mobcashOn ? `⏳ MobCash va créditer le compte 1xBet...` : `⏳ Créditez manuellement puis confirmez sur le panneau admin...`)
   );
-  await sendWhatsApp(
-    order.whatsapp,
-    `💳 Simba — Paiement Waafi confirmé pour votre dépôt #${order.id} (${order.montant} DJF).\n` +
-    `Crédit en cours vers votre compte 1xBet...`
-  );
+  // Pas de message client « paiement reçu » : côté client un dépôt n'a que deux états, en attente / crédité.
 
   if (!mobcashOn) {
     return { credited: false, manual: true };

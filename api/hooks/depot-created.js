@@ -5,7 +5,7 @@ import { notifyAgentsWhatsApp, sendWhatsApp } from '../_lib/whatsapp.js';
 import { verifyDepotMatch } from '../_lib/waafiMatch.js';
 import { creditDepot, flagMismatch } from '../_lib/depotCredit.js';
 import { receiptSignedUrl } from '../_lib/receipts.js';
-import { describeReceipt, failedReasons, findSmsForOrder } from '../_lib/receiptMatch.js';
+import { describeReceipt, failedReasons, findDuplicateReceiptOrder, findSmsForOrder } from '../_lib/receiptMatch.js';
 import { extractReceiptForOrder } from '../_lib/receiptAI.js';
 
 // Configurer ce endpoint comme Database Webhook Supabase :
@@ -60,6 +60,14 @@ export default async function handler(req, res) {
         isFraud = true;
         reasons = [...reasons, `Transfer ID + montant déjà soumis récemment (ordre #${dupes[0].id})`];
       }
+    }
+
+    // Même reçu déjà utilisé par un autre ordre actif : pas de second crédit.
+    const dupReceipt = await findDuplicateReceiptOrder(record);
+    if (dupReceipt) {
+      score = Math.max(score, 100);
+      isFraud = true;
+      reasons = [...reasons, `Reçu déjà utilisé par l'ordre #${dupReceipt}`];
     }
 
     if (score > 0) {

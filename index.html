@@ -1143,14 +1143,13 @@ async function fetchOrderStatus(orderId){
   return null;
 }
 
-function timelineHtml(status){
-  const steps = [
-    { key:'en_attente', label:t('suivi.status.en_attente') },
-    { key:'paiement_recu', label:t('suivi.status.paiement_recu') },
-    { key:'credite', label:t('suivi.status.credite') },
-  ];
+function timelineHtml(status, isDepot){
+  // Dépôt : 2 étapes seulement (en attente -> crédité). Retrait : 3 étapes.
+  const steps = isDepot
+    ? [{ key:'en_attente', label:t('suivi.status.en_attente') }, { key:'credite', label:t('suivi.status.credite') }]
+    : [{ key:'en_attente', label:t('suivi.status.en_attente') }, { key:'paiement_recu', label:t('suivi.status.paiement_recu') }, { key:'credite', label:t('suivi.status.credite') }];
   const failed = status === 'rejete' || status === 'fraude' || status === 'annule';
-  const order = ['en_attente','paiement_recu','credite'];
+  const order = steps.map(x => x.key);
   const curIdx = order.indexOf(status);
   return `<ul class="timeline">` + steps.map((s, i) => {
     let cls = '';
@@ -1166,25 +1165,34 @@ function timelineHtml(status){
   ` : '') + `</ul>`;
 }
 
+// Dépôts : seulement deux états visibles pour le client, "En attente" et
+// "Crédité avec succès". "Paiement reçu" est une étape interne (paiement vérifié,
+// crédit 1xBet en cours ou à relancer) : tant que le compte n'est pas crédité,
+// l'ordre reste affiché "En attente". Refus et annulation restent visibles.
+function depotDisplayStatus(status){
+  return status === 'paiement_recu' ? 'en_attente' : status;
+}
+
 // État visuel principal (icône + titre + étape courante) pour chaque statut.
-function suiviStateVisual(order){
+function suiviStateVisual(order, isDepot){
   const status = order.status;
+  const total = isDepot ? 2 : 3;
   if (status === 'en_attente') {
-    return { icon: icon('clock', 40), iconClass:'', title: t('suivi.step1.title'), step: 1, fillClass:'' };
+    return { icon: icon('clock', 40), iconClass:'', title: t('suivi.step1.title'), step: 1, total, fillClass:'' };
   }
   if (status === 'paiement_recu') {
     if (order.mobcash_status === 'echec_permanent') {
-      return { icon: icon('alert', 40), iconClass:'failed', title: t('suivi.step2.title'), step: 2, fillClass:'failed' };
+      return { icon: icon('alert', 40), iconClass:'failed', title: t('suivi.step2.title'), step: 2, total, fillClass:'failed' };
     }
-    return { icon: '<span class="spinner" style="width:36px;height:36px;border-width:3px;"></span>', iconClass:'', title: t('suivi.step2.title'), step: 2, fillClass:'' };
+    return { icon: '<span class="spinner" style="width:36px;height:36px;border-width:3px;"></span>', iconClass:'', title: t('suivi.step2.title'), step: 2, total, fillClass:'' };
   }
   if (status === 'credite') {
-    return { icon: icon('check', 40), iconClass:'success', title: t('suivi.step3.success'), step: 3, fillClass:'success' };
+    return { icon: icon('check', 40), iconClass:'success', title: t('suivi.step3.success'), step: total, total, fillClass:'success' };
   }
   return {
     icon: icon('x', 40), iconClass:'failed',
     title: status === 'annule' ? t('suivi.status.annule') : t('suivi.step3.failed'),
-    step: 3, fillClass:'failed',
+    step: total, total, fillClass:'failed',
   };
 }
 
@@ -1230,31 +1238,38 @@ function renderSuivi(app, orderId){
       [t('suivi.detail.updated'), new Date(order.updated_at).toLocaleString()],
     ].filter(Boolean);
 
-    const visual = suiviStateVisual(order);
-    const showFailureBlock = (order.status === 'rejete' || order.status === 'fraude' || order.status === 'annule')
-      || (order.status === 'paiement_recu' && order.mobcash_status === 'echec_permanent');
+    // Dépôt : statut affiché dérivé (voir depotDisplayStatus). Les erreurs techniques
+    // MobCash ne sont jamais montrées au client, sauf un ID 1xBet invalide (il peut agir).
+    const rawStatus = order.status;
+    const status = isDepot ? depotDisplayStatus(rawStatus) : rawStatus;
+    const creditPending = isDepot && rawStatus === 'paiement_recu';
+    const view = isDepot ? { ...order, status, mobcash_status: null } : order;
+    const visual = suiviStateVisual(view, isDepot);
+    const invalidAccount = creditPending && /payerNickname/i.test(order.last_error || '');
+    const showFailureBlock = (status === 'rejete' || status === 'fraude' || status === 'annule')
+      || (!isDepot && rawStatus === 'paiement_recu' && order.mobcash_status === 'echec_permanent');
     // Le paiement Waafi reçu ne correspondait pas exactement à l'ordre
     // (montant ou numéro expéditeur différent) : l'ordre reste en_attente
     // (pas rejeté, en attente de vérification manuelle) mais le client doit
     // en être informé au lieu de voir "en attente" sans explication.
-    const showMismatchWarning = order.status === 'en_attente' && !!order.last_error;
+    const showMismatchWarning = rawStatus === 'en_attente' ? !!order.last_error : invalidAccount;
     const showReasonBox = (showFailureBlock || showMismatchWarning) && order.last_error;
-    const showCancel = order.status === 'en_attente';
+    const showCancel = rawStatus === 'en_attente';
     const showSupport = showFailureBlock || showMismatchWarning;
 
     content.innerHTML = `
       <div class="suivi-state-icon ${visual.iconClass}">${visual.icon}</div>
       <h2>${visual.title}</h2>
       <div class="suivi-id mono">#${order.id}</div>
-      <div class="badge badge-${order.status}">${t('suivi.status.' + order.status)}</div>
+      <div class="badge badge-${status}">${t('suivi.status.' + status)}</div>
       <div style="margin-top:14px;color:var(--text-dim);font-family:var(--font-mono);">${Number(order.montant).toLocaleString()} DJF</div>
 
-      <div class="suivi-progress-label">${t('suivi.progress')} ${visual.step}/3</div>
-      <div class="suivi-progress-bar"><div class="suivi-progress-fill ${visual.fillClass}" style="width:${(visual.step/3*100)}%"></div></div>
+      <div class="suivi-progress-label">${t('suivi.progress')} ${visual.step}/${visual.total}</div>
+      <div class="suivi-progress-bar"><div class="suivi-progress-fill ${visual.fillClass}" style="width:${(visual.step/visual.total*100)}%"></div></div>
 
-      ${showReasonBox ? `<div class="suivi-reason ${showFailureBlock ? '' : 'warning'}"><strong>${t('suivi.reason')}:</strong> ${/payerNickname/i.test(order.last_error) ? t('suivi.invalid_account') : order.last_error}</div>` : ''}
+      ${showReasonBox ? `<div class="suivi-reason ${showFailureBlock ? '' : 'warning'}"><strong>${t('suivi.reason')}:</strong> ${/payerNickname/i.test(order.last_error) ? t('suivi.invalid_account') : escHtml(order.last_error)}</div>` : ''}
 
-      ${timelineHtml(order.status)}
+      ${timelineHtml(status, isDepot)}
 
       <div class="suivi-details">
         ${rows.map(([label, value]) => `

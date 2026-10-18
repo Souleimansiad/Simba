@@ -56,7 +56,10 @@ async function alertStaleOrders() {
   );
 
   const lines = toAlert.map((o) => `#${o.id} (${o.type}) — ${o.montant} DJF — bloqué depuis ${Math.round((Date.now() - new Date(o.created_at).getTime()) / 60000)} min`);
-  await sendTelegramAdmin(`⏱️ <b>${toAlert.length} ordre(s) bloqué(s) &gt; ${STALE_MINUTES} min</b>\n` + lines.join('\n'));
+  await sendTelegramAdmin(
+    `⏱️ <b>${toAlert.length} ordre(s) bloqué(s) &gt; ${STALE_MINUTES} min</b>\n` + lines.join('\n') +
+    `\n\nSi le client a bien payé : <b>confirme #ORDRE</b> · crédit MobCash en échec : <b>relance #ORDRE</b>`
+  );
 
   return { stale: stale.length, new_alerts: toAlert.length };
 }

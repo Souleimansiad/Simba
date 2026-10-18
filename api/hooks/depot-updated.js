@@ -24,10 +24,18 @@ export default async function handler(req, res) {
 
   try {
     if (oldRecord && oldRecord.status !== record.status) {
+      // Admin : tous les changements, y compris l'étape interne "paiement reçu".
       const label = STATUS_LABEL_FR[record.status] || record.status;
       await sendTelegramAdmin(`🔄 Dépôt #${record.id} → <b>${label}</b>`);
-      if (record.whatsapp) {
-        await sendWhatsApp(record.whatsapp, `Simba — Votre dépôt #${record.id} (${record.montant} DJF) : ${label}`);
+      // Client : un dépôt n'a que deux états visibles, en attente / crédité avec
+      // succès. Seul le crédit déclenche un message (les refus et les échecs sont
+      // annoncés, avec leur raison, par l'action qui les provoque).
+      if (record.status === 'credite' && record.whatsapp) {
+        await sendWhatsApp(
+          record.whatsapp,
+          `✅ Simba — Dépôt #${record.id} crédité avec succès ! ` +
+          `${record.montant} DJF envoyés sur votre compte 1xBet ${record.id_bet1x}. Merci d'utiliser Simba 🦁`
+        );
       }
     }
     return res.status(200).json({ ok: true });

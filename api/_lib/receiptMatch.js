@@ -196,3 +196,33 @@ export function describeReceipt(r) {
     when,
   ].filter(Boolean).join(' · ');
 }
+
+/**
+ * Empreinte d'un reçu : un même paiement ne doit servir qu'à UN ordre, même si
+ * l'agent l'a confirmé à la main (aucun SMS consommé dans ce cas) et que le
+ * client soumet ensuite à nouveau la même capture.
+ */
+export function receiptFingerprint(r) {
+  if (!r || !r.kind) return null;
+  if (r.kind === 'ussd') return r.transfer_id ? `ussd:${r.transfer_id}` : null;
+  if (r.sender_number && r.amount != null && r.date_iso) {
+    return `app:${normalizePhone(r.sender_number)}:${r.amount}:${String(r.date_iso).slice(0, 16)}`;
+  }
+  return null;
+}
+
+/** Identifiant d'un autre ordre actif portant le même reçu, ou null. */
+export async function findDuplicateReceiptOrder(order) {
+  const fp = receiptFingerprint(order.receipt_data);
+  if (!fp) return null;
+  const { data } = await supabaseAdmin
+    .from('depot_orders')
+    .select('id,receipt_data')
+    .not('receipt_data', 'is', null)
+    .eq('montant', order.montant)
+    .neq('id', order.id)
+    .not('status', 'in', '(rejete,fraude,annule)')
+    .limit(200);
+  const dup = (data || []).find((o) => receiptFingerprint(o.receipt_data) === fp);
+  return dup ? dup.id : null;
+}

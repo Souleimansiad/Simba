@@ -52,6 +52,26 @@ Le client ne saisit plus de Transfer ID : il joint la capture de son paiement Wa
 - Commande Telegram **`/ia`** : solde/consommation de chaque clé (`GET /api/v1/key`) et cumuls aujourd'hui / 7 jours / 30 jours.
 - Le cron quotidien (`/api/ordres-bloques`) contrôle les clés et alerte sur Telegram : clé invalide, solde bas, dépense anormale.
 
+## Statuts d'un dépôt côté client
+
+Un dépôt n'a que **deux états visibles** pour le client : **En attente** et **Crédité avec succès**.
+- « Paiement reçu » est une étape interne (paiement vérifié, crédit 1xBet en cours ou à relancer) : le client voit « En attente » tant que le compte 1xBet n'est pas crédité.
+- Le client reçoit **un seul** WhatsApp de succès, au crédit. Un refus, une annulation ou une fraude restent affichés comme tels.
+- L'admin (Telegram, panneau) voit toujours les statuts internes.
+
+## Commandes du bot Telegram admin
+
+| Commande | Quand l'utiliser |
+|---|---|
+| `confirme #ORDRE` | Le client a **bien payé** mais le paiement n'a pas été détecté (macros en panne, erreur réseau ou technique). Crédite le compte 1xBet via MobCash. Réservé aux ordres « en attente ». |
+| `relance #ORDRE` | Le paiement est confirmé mais le **crédit MobCash a échoué** (solde de la caisse insuffisant, devise, autre). Réessaie le crédit. |
+| `relance #ORDRE 123456789` | Idem avec un **ID 1xBet corrigé** (ID erroné). |
+| `relance #ORDRE oui` | Quand l'échec précédent est ambigu (timeout, erreur serveur) : MobCash a peut-être déjà crédité. Vérifier l'historique du caissier, puis confirmer avec `oui`. |
+| `/ordres` | Dépôts/retraits à traiter, avec la commande à utiliser. |
+| `/status`, `/ia`, `/mobcash`, `reset circuit` | État du circuit MobCash, coût IA, diagnostic MobCash, réinitialisation. |
+
+Garde-fous : chaque `confirme` pose une clé anti-double-crédit (le Transfer ID du SMS correspondant s'il existe, sinon l'ordre) ; deux `relance` simultanées ne font qu'un dépôt ; une relance est refusée si un crédit automatique est en cours ; un même reçu ne peut servir qu'à un seul ordre. Les erreurs MobCash sont expliquées (ID 1xBet, solde, devise, connexion, limite de requêtes). Les actions sont journalisées dans `audit_logs`. Le panneau admin utilise la même logique.
+
 ## Diagnostic MobCash
 
 Commande Telegram **`/mobcash`** (chat admin) : une seule tentative de connexion, **aucun dépôt**. Affiche la réponse exacte de MobCash, l'état des 3 variables (longueur, espaces, guillemets collés — jamais leur valeur) et l'IP de sortie de Vercel (utile si MobCash filtre par IP). Évitez de la lancer en boucle : MobCash applique un rate limit.

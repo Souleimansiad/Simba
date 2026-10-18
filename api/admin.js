@@ -3,6 +3,7 @@ import { resolveCaller, requireRole } from './_lib/auth.js';
 import { mobcashDeposit, mobcashPayout, isMobcashConfigured } from './_lib/mobcash.js';
 import { sendTelegramAdmin } from './_lib/telegram.js';
 import { sendWhatsApp, isGreenApiConfigured } from './_lib/whatsapp.js';
+import { confirmDepotManually, retryDepotCredit } from './_lib/depotActions.js';
 
 // Route admin consolidée : plusieurs actions peu fréquentes regroupées dans
 // un seul fichier pour rester sous la limite de fonctions serverless du plan
@@ -136,6 +137,18 @@ async function handleActionOrdre(req, res) {
     }
   } else if (action === 'fraude') {
     await supabaseAdmin.from(table).update({ status: 'fraude' }).eq('id', order_id);
+  } else if (action === 'confirmer' && type === 'depot') {
+    // Même logique que la commande Telegram « confirme » : une seule règle pour
+    // l'agent, qu'il passe par le panneau ou par Telegram.
+    const r = await confirmDepotManually(order, { actor: caller.email || caller.id, source: 'admin' });
+    if (!r.ok) {
+      if (r.code === 'mobcash_failed') {
+        await sendTelegramAdmin(`❌ Confirmation manuelle #${order_id} : ${r.message}`);
+        return res.status(502).json({ error: 'Confirmation enregistrée mais crédit MobCash échoué : ' + r.message });
+      }
+      return res.status(409).json({ error: r.message });
+    }
+    return res.status(200).json({ ok: true, message: r.message });
   } else if (action === 'confirmer') {
     // Verrou anti-double-crédit : un INSERT qui échoue sur conflit AVANT
     // tout autre changement d'état, pas une vérification applicative après
@@ -209,38 +222,18 @@ async function handleRetryDeposit(req, res) {
   if (fetchErr) throw fetchErr;
   if (!order) return res.status(404).json({ error: 'Ordre introuvable' });
   if (order.status === 'credite') return res.status(200).json({ ok: true, already_credited: true });
-  if (!isMobcashConfigured()) return res.status(400).json({ error: 'MobCash non configuré — mode manuel, rien à relancer.' });
 
-  // Après un échec MobCash "compte 1xBet invalide", l'admin peut corriger
-  // l'ID avant de relancer plutôt que de rejeter tout l'ordre.
-  const idBet1x = new_id_bet1x && new_id_bet1x.trim() ? new_id_bet1x.trim() : order.id_bet1x;
-
-  try {
-    await mobcashDeposit(idBet1x, order.montant);
-  } catch (mcErr) {
-    await supabaseAdmin.from('depot_orders').update({ id_bet1x: idBet1x, last_error: mcErr.message }).eq('id', order_id);
-    await sendTelegramAdmin(`❌ Relance manuelle #${order_id} toujours en échec (ID 1xBet ${idBet1x}) : ${mcErr.message}`);
-    if (order.whatsapp) {
-      await sendWhatsApp(
-        order.whatsapp,
-        `❌ Simba — La relance de votre dépôt #${order_id} a de nouveau échoué. Notre équipe reste sur le dossier.`
-      );
+  // Après un échec « compte 1xBet invalide », l'admin peut corriger l'ID avant
+  // de relancer. Le panneau demande déjà de vérifier l'historique MobCash : force = true.
+  const newBetId = new_id_bet1x && new_id_bet1x.trim() ? new_id_bet1x.trim() : null;
+  const r = await retryDepotCredit(order, { actor: caller.email || caller.id, newBetId, force: true, source: 'admin' });
+  if (!r.ok) {
+    if (r.code === 'mobcash_failed') {
+      await sendTelegramAdmin(`❌ Relance manuelle #${order_id} toujours en échec : ${r.message}`);
+      return res.status(502).json({ error: 'Relance échouée : ' + r.message });
     }
-    return res.status(502).json({ error: 'Relance échouée : ' + mcErr.message });
+    return res.status(409).json({ error: r.message });
   }
-
-  await supabaseAdmin.from('depot_orders').update({
-    id_bet1x: idBet1x, status: 'credite', mobcash_status: null, last_error: null,
-  }).eq('id', order_id);
-  await supabaseAdmin.from('audit_logs').insert({
-    action: 'admin_retry_deposit', actor: caller.email || caller.id, target: order_id, meta: { new_id_bet1x: idBet1x },
-  });
-  await sendTelegramAdmin(`✅ Dépôt #${order_id} crédité après relance manuelle${new_id_bet1x ? ` (nouvel ID 1xBet : ${idBet1x})` : ''}.`);
-  await sendWhatsApp(
-    order.whatsapp,
-    `✅ Simba — Dépôt #${order_id} crédité avec succès ! ${order.montant} DJF envoyés sur votre compte 1xBet ${idBet1x}.`
-  );
-
   return res.status(200).json({ ok: true });
 }
 
