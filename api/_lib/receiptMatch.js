@@ -65,6 +65,15 @@ export function isShopName(name) {
 }
 
 /* --------------------------- critères --------------------------- */
+// Heure de Djibouti lisible (JJ/MM/AAAA HH:MM) pour les messages montrés à l'agent et au client.
+const fmtDjib = (iso) => {
+  if (!iso) return '?';
+  const d = new Date(new Date(iso).getTime() + 3 * 3600 * 1000);
+  if (Number.isNaN(d.getTime())) return '?';
+  const p = (n) => String(n).padStart(2, '0');
+  return `${p(d.getUTCDate())}/${p(d.getUTCMonth() + 1)}/${d.getUTCFullYear()} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
+};
+
 const sameAmount = (a, b) => a != null && b != null && Math.abs(Number(a) - Number(b)) < 0.01;
 
 function smsTime(sms) {
@@ -103,14 +112,15 @@ export function evaluateReceipt(order, sms) {
   const rt = r.date_iso ? new Date(r.date_iso).getTime() : null;
   const st = smsTime(sms);
   add('date', 'Date', rt != null && st != null && Math.abs(rt - st) <= DATE_TOLERANCE_MS,
-    `capture: ${r.date_iso ?? '?'} / SMS reçu: ${st != null ? new Date(st).toISOString() : '?'}`);
+    `reçu : ${fmtDjib(r.date_iso)} / SMS : ${st != null ? fmtDjib(new Date(st).toISOString()) : '?'}`);
 
   const passed = criteria.filter((c) => c.ok).length;
   return { applicable: true, ok: passed === criteria.length, passed, total: criteria.length, criteria };
 }
 
 export function failedReasons(evaluation) {
-  return evaluation.criteria.filter((c) => !c.ok).map((c) => `${c.label} différent (${c.detail})`);
+  // Accord du libellé : « Date différente », « Montant différent »…
+  return evaluation.criteria.filter((c) => !c.ok).map((c) => `${c.label} ${c.key === 'date' ? 'différente' : 'différent'} (${c.detail})`);
 }
 
 /* ------------------------ recherche en base ------------------------ */
